@@ -1,0 +1,25 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+<f:entry field="chrootName" title="Chroot Environment">
+   <f:select />
+</f:entry>
+<f:entry field="clear" title="Clear">
+<f:checkbox />
+</f:entry>
+<f:entry field="command" title="Command">
+<f:textarea/>
+</f:entry>
+
+<f:advanced>
+<f:entry field="packagesFile" title="Requirements File">
+<f:textbox/>
+</f:entry>
+<f:entry field="additionalPackages" title="Requirements">
+<f:textbox/>
+</f:entry>
+<f:entry field="ignoreExit" title="Ignore exit code">
+<f:checkbox />
+</f:entry>
+</f:advanced>
+
+
+</j:jelly>
