@@ -6,6 +6,7 @@ package org.jenkinsci.plugins.chroot.tools;
 
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Launcher;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
@@ -37,7 +38,7 @@ public class ChrootCreator extends ToolInstaller {
 
         @Override
         public String getDisplayName() {
-            return "Create the chroot environment";
+            return "Create the chroot environment on demand.";
         }
 
         @Override
@@ -48,8 +49,33 @@ public class ChrootCreator extends ToolInstaller {
 
     @Override
     public boolean appliesTo(Node node) {
-        return super.appliesTo(node);
+        // check if the label applies
+        if ( ! super.appliesTo(node)){
+            return false;
+        }
+        // check if we are on unix
+        Launcher launcher = node.createLauncher(TaskListener.NULL);
+        if (!launcher.isUnix()) {
+            return false;
+        }
+        
+        // check if the required tools are installed
+        ChrootToolset toolset = ChrootToolset.getInstallationByName(tool.getName());
+        FilePath tool = new FilePath(node.getChannel(), toolset.getChrootWorker().getTool());
+        try {
+            if (!tool.exists()) {
+                return false;
+            }
+        } catch (IOException ex) {
+            return false;
+        } catch (InterruptedException ex) {
+            return false;
+        }
+        
+        //TODO: check for correct permissions
+        return true;
     }
+    
     
     
 

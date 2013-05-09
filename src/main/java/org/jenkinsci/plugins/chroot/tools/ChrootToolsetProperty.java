@@ -9,8 +9,6 @@ import hudson.tools.ToolProperty;
 import hudson.tools.ToolPropertyDescriptor;
 import java.io.File;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
@@ -68,7 +66,7 @@ public class ChrootToolsetProperty extends ToolProperty<ChrootToolset> implement
         @Override
         public String getDisplayName() {
             return "Advanced configuration";
-        }
+        }   
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
@@ -76,5 +74,7 @@ public class ChrootToolsetProperty extends ToolProperty<ChrootToolset> implement
             save();
             return x;
         }
+        
+        
     }
 }

@@ -34,15 +34,25 @@ import org.kohsuke.stapler.QueryParameter;
 public class ChrootToolset extends ToolInstallation implements EnvironmentSpecific<ChrootToolset>,
         NodeSpecific<ChrootToolset> {
     private String toolName;
+    private long lastModified;
     
     @DataBoundConstructor
     public ChrootToolset(String name, String home, String toolName, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.toolName = toolName;
+        lastModified = System.currentTimeMillis();
     }
 
     public String getToolName() {
         return toolName;
+    }
+
+    public long getLastModified() {
+        return lastModified;
+    }
+
+    public void setLastModified(long lastModified) {
+        this.lastModified = lastModified;
     }
     
     public ChrootWorker getChrootWorker(){
@@ -66,6 +76,22 @@ public class ChrootToolset extends ToolInstallation implements EnvironmentSpecif
         }
         return null;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (! obj.getClass().equals(this.getClass())){
+            return false;
+        }
+        ChrootToolset other = (ChrootToolset)obj;
+        
+        boolean equal =
+                this.getName().equals(other.getName())
+                && this.getHome().equals(other.getHome())
+                && this.getToolName().equals(other.getToolName())
+                && this.getProperties().size() == other.getProperties().size()
+                && this.getProperties().toList().containsAll(other.getProperties().toList());       
+        return equal;
+    }    
     
     public static boolean isEmpty()
     {

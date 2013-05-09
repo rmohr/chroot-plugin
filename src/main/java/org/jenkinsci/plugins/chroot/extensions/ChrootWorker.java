@@ -16,7 +16,6 @@ import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.List;
 import jenkins.model.Jenkins;
 
@@ -60,6 +59,13 @@ public abstract class ChrootWorker implements ExtensionPoint {
     protected int getUID(Launcher launcher, String userName) throws IOException, InterruptedException{
         ArgumentListBuilder builder = new ArgumentListBuilder();
         builder.add("id").add("-u").add(userName);
+        Integer id = new Integer(run(launcher, builder));
+        return id;
+    }
+    
+    protected int getGID(Launcher launcher, String userName) throws IOException, InterruptedException{
+        ArgumentListBuilder builder = new ArgumentListBuilder();
+        builder.add("id").add("-g").add(userName);
         Integer id = new Integer(run(launcher, builder));
         return id;
     }
