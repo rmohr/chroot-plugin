@@ -12,6 +12,8 @@ import java.io.Serializable;
 import java.util.List;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.jenkinsci.plugins.chroot.util.ChrootUtil;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -20,7 +22,7 @@ import org.kohsuke.stapler.StaplerRequest;
  *
  * @author roman
  */
-public class ChrootToolsetProperty extends ToolProperty<ChrootToolset> implements Serializable {
+public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> implements Serializable {
 
     private List<String> packages;
     private String setupCommand;
@@ -47,6 +49,37 @@ public class ChrootToolsetProperty extends ToolProperty<ChrootToolset> implement
         return packages;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+      if (obj instanceof ChrootToolsetProperty == false)  
+      {  
+        return false;  
+      }  
+      if (this == obj)  
+      {  
+         return true;  
+      } 
+      final ChrootToolsetProperty other = (ChrootToolsetProperty)obj;
+      
+      return new EqualsBuilder()
+              .append(this.packages.toArray(new String[this.packages.size()]),
+              other.packages.toArray(new String[other.packages.size()])
+              )
+              .append(this.setupCommand, other.setupCommand)
+              .append(this.tarball, other.tarball)
+              .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder()
+                .append(this.packages)
+                .append(this.setupCommand)
+                .append(this.tarball)
+                .append(this.packages.toArray(new String[this.packages.size()]))
+                .toHashCode();
+    }
+    
     public String getSetupCommand() {
         return setupCommand;
     }

@@ -13,6 +13,7 @@ import hudson.tools.ToolInstallation;
 import hudson.tools.ToolInstaller;
 import hudson.tools.ToolInstallerDescriptor;
 import java.io.IOException;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.jenkinsci.plugins.chroot.extensions.ChrootWorker;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -32,7 +33,7 @@ public class ChrootCreator extends ToolInstaller {
         ChrootToolset toolset = ChrootToolset.getInstallationByName(tool.getName());
         return ChrootWorker.getByName(toolset.getToolName()).setUp(tool, node, log);
     }
-    
+
     @Extension
     public static class DescriptorImpl extends ToolInstallerDescriptor<ChrootCreator>{
 

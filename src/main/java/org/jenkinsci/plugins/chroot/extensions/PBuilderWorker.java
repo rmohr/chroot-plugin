@@ -24,7 +24,7 @@ import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
  */
 
 @Extension
-public class PBuilderWorker extends ChrootWorker  {
+public final class PBuilderWorker extends ChrootWorker  {
 
     @Override
     public String getName() {

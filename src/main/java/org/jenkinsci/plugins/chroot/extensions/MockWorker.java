@@ -13,7 +13,6 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
@@ -23,7 +22,7 @@ import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
  * @author roman
  */
 @Extension
-public class MockWorker extends ChrootWorker {
+public final class MockWorker extends ChrootWorker {
 
     @Override
     public FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
@@ -32,7 +31,6 @@ public class MockWorker extends ChrootWorker {
         // get path to tarball
         FilePath tarBall;
         ChrootToolsetProperty property = tool.getProperties().get(ChrootToolsetProperty.class);
-        
         // take the property into account if it exists
         if (property != null) {
             

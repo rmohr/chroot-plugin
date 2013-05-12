@@ -20,9 +20,12 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import javax.servlet.ServletException;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.jenkinsci.plugins.chroot.extensions.ChrootWorker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -31,7 +34,7 @@ import org.kohsuke.stapler.QueryParameter;
  *
  * @author roman
  */
-public class ChrootToolset extends ToolInstallation implements EnvironmentSpecific<ChrootToolset>,
+public final class ChrootToolset extends ToolInstallation implements EnvironmentSpecific<ChrootToolset>,
         NodeSpecific<ChrootToolset> {
     private String toolName;
     private long lastModified;
@@ -79,19 +82,36 @@ public class ChrootToolset extends ToolInstallation implements EnvironmentSpecif
 
     @Override
     public boolean equals(Object obj) {
-        if (! obj.getClass().equals(this.getClass())){
-            return false;
-        }
-        ChrootToolset other = (ChrootToolset)obj;
-        
-        boolean equal =
-                this.getName().equals(other.getName())
-                && this.getHome().equals(other.getHome())
-                && this.getToolName().equals(other.getToolName())
-                && this.getProperties().size() == other.getProperties().size()
-                && this.getProperties().toList().containsAll(other.getProperties().toList());       
-        return equal;
-    }    
+      if (obj instanceof ChrootToolset == false)  
+      {  
+        return false;  
+      }  
+      if (this == obj)  
+      {  
+         return true;  
+      } 
+      final ChrootToolset other = (ChrootToolset)obj;
+      ChrootToolsetProperty p_this = this.getProperties().get(ChrootToolsetProperty.class);
+      ChrootToolsetProperty p_other = other.getProperties().get(ChrootToolsetProperty.class);
+
+      return new EqualsBuilder()
+              .append(this.getName(), other.getName())
+              .append(this.getHome(), other.getHome())
+              .append(this.getToolName(), other.getToolName())
+              .append(p_this, p_other)
+              .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        ChrootToolsetProperty p_this = this.getProperties().get(ChrootToolsetProperty.class);
+        return new HashCodeBuilder()
+                .append(this.getName())
+                .append(this.getHome())
+                .append(this.getToolName())
+                .append(p_this)
+                .toHashCode();
+    }
     
     public static boolean isEmpty()
     {
@@ -107,7 +127,7 @@ public class ChrootToolset extends ToolInstallation implements EnvironmentSpecif
     public static final class DescriptorImpl extends ToolDescriptor<ChrootToolset> {
 
         @CopyOnWrite
-        private volatile ChrootToolset[] installations = new ChrootToolset[0];
+         private volatile ChrootToolset[] installations;
         
         public ListBoxModel doFillToolNameItems() {
             ListBoxModel items = new ListBoxModel();
@@ -118,6 +138,7 @@ public class ChrootToolset extends ToolInstallation implements EnvironmentSpecif
         }
         
         public DescriptorImpl() {
+            this.installations = new ChrootToolset[0];
             load();
         }
         
@@ -128,6 +149,15 @@ public class ChrootToolset extends ToolInstallation implements EnvironmentSpecif
 
         @Override
         public void setInstallations(ChrootToolset... installations) {
+            
+            List<ChrootToolset> old_installations = Arrays.asList(this.installations);
+            for (ChrootToolset tool: installations){
+                int index = old_installations.indexOf(tool);
+                if (index != -1){
+                 tool.setLastModified(old_installations.get(index).getLastModified());
+                }
+            }
+            
             this.installations = installations;
             save();
         }
@@ -163,4 +193,6 @@ public class ChrootToolset extends ToolInstallation implements EnvironmentSpecif
             return FormValidation.ok();
         }
     }
+    
+    
 }
