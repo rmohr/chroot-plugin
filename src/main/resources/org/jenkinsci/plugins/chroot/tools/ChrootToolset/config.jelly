@@ -1,12 +1,12 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-    <f:entry title="Name" field="name" help="${h.resourcePath}/plugin/chroot/tools/ChrootToolset/help-name.html">
+    <f:entry title="Name" field="name">
         <f:textbox />
     </f:entry>
-    <f:entry title="Home" field="home" help="${h.resourcePath}/plugin/chroot/tools/ChrootToolset/help-location.html">
+    <f:entry title="Home" field="home">
         <f:textbox />
     </f:entry>
-    <f:entry title="Tool" field="toolName" help="${h.resourcePath}/plugin/chroot/tools/ChrootToolset/help-location.html">
+    <f:entry title="Tool" field="toolName">
         <f:select default="pbuilder"/>
     </f:entry>
 </j:jelly>

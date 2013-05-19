@@ -5,6 +5,8 @@
 package org.jenkinsci.plugins.chroot.tools;
 
 import hudson.Extension;
+import hudson.model.AbstractDescribableImpl;
+import hudson.model.Descriptor;
 import hudson.tools.ToolProperty;
 import hudson.tools.ToolPropertyDescriptor;
 import java.io.File;
@@ -27,13 +29,15 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
     private List<String> packages;
     private String setupCommand;
     private File tarball;
+    private List<Repository> repositories;
 
     @DataBoundConstructor
-    public ChrootToolsetProperty(String setupCommand, String packages, String tarball) {
+    public ChrootToolsetProperty(String setupCommand, String packages, String tarball, List<Repository> repos) {
         super();
         this.packages = ChrootUtil.split(packages);
         this.setupCommand = setupCommand;
         this.tarball = new File(tarball);
+        this.repositories = repos;
     }
 
     @Override
@@ -43,6 +47,10 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
 
     public String getPackages() {
         return StringUtils.join(packages, " ");
+    }
+    
+    public List<Repository> getRepos(){
+        return this.repositories;
     }
     
     public List<String> getPackagesList(){
@@ -86,7 +94,9 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
 
     public File getTarball() {
         return tarball;
-    }
+    }   
+
+
 
     @Extension
     public static final class ChrootToolsetPropertyDescriptor extends ToolPropertyDescriptor {

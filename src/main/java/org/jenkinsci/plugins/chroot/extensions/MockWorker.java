@@ -4,6 +4,7 @@
  */
 package org.jenkinsci.plugins.chroot.extensions;
 
+import com.google.common.collect.ImmutableList;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -118,6 +119,10 @@ public final class MockWorker extends ChrootWorker {
     @Override
     public boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages) throws IOException, InterruptedException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+    
+    public List<String> getDefaultPackages() {
+        return new ImmutableList.Builder<String>().build();
     }
 
 }

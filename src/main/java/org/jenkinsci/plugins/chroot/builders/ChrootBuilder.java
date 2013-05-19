@@ -110,7 +110,6 @@ public class ChrootBuilder extends Builder implements Serializable{
         if (packageFile.exists() && !packageFile.isDirectory()) {
             String packageFilePackages = packageFile.readToString();
             packages.addAll(ChrootUtil.split(packageFilePackages));
-
         }
         
         if (!packages.isEmpty()) {

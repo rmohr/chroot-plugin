@@ -1,25 +1,25 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <f:entry title="${%Tarball name}" field="tarball" help="${h.resourcePath}/plugin/chroot/tools/help-name.html">
-    <f:textbox default="base.tgz" />
+  <f:entry title="${%Tarball name}" field="tarball">
+    <f:textbox />
   </f:entry>    
-    <f:entry title="${%Install packages}" field="packages" help="${h.resourcePath}/plugin/chroot/tools/help-name.html">
+    <f:entry title="${%Install packages}" field="packages">
     <f:textbox />
   </f:entry>
-  <f:entry title="${%Shell command}" field="setupCommand" help="${h.resourcePath}/plugin/chroot/tools/help-name.html">
+  <f:entry title="${%Shell command}" field="setupCommand">
     <f:textarea />
   </f:entry>    
 
-    <f:entry title="Repositories" help="/plugin/git/repositories.html">
-      <f:repeatable name="linuxRepo" field="linuxRepos" minimum="0" noAddButton="false">
+    <f:entry title="Repositories">
+      <f:repeatable name="linuxRepo" field="repos" minimum="0" noAddButton="false">
         <table width="100%">
 
-            <f:entry title="${%Repository URL}" field="repository">
-              <f:textbox/>
+            <f:entry title="${%Repository URL}">
+              <f:textbox />
             </f:entry>
 
-            <f:entry title="${%Keyfile URL}" field="keyfile">
-              <f:textbox/>
+            <f:entry title="${%Keyfile URL}">
+              <f:textbox />
             </f:entry>
 
           <f:entry>
