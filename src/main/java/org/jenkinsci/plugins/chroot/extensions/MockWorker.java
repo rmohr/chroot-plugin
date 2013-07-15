@@ -17,6 +17,7 @@ import hudson.util.ArgumentListBuilder;
 import java.io.IOException;
 import java.util.List;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
+import org.jenkinsci.plugins.chroot.tools.Repository;
 
 /**
  *
@@ -91,7 +92,7 @@ public final class MockWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands) throws IOException, InterruptedException {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException {
         String userName = super.getUserName(launcher);
         int id = super.getUID(launcher, userName);
         commands = "cd " + build.getWorkspace().getRemote() + "\n" + commands;
@@ -123,6 +124,16 @@ public final class MockWorker extends ChrootWorker {
     
     public List<String> getDefaultPackages() {
         return new ImmutableList.Builder<String>().build();
+    }
+
+    @Override
+    public boolean addRepositories(FilePath tarBall, Launcher launcher, TaskListener log, List<Repository> Repositories) throws IOException, InterruptedException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
 }

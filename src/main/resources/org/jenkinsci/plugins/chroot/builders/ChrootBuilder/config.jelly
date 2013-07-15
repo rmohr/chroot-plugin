@@ -5,6 +5,9 @@
 <f:entry field="clear" title="Clear">
 <f:checkbox />
 </f:entry>
+<f:entry field="loginAsRoot" title="Login as root">
+<f:checkbox />
+</f:entry>
 <f:entry field="command" title="Command">
 <f:textarea/>
 </f:entry>

@@ -14,11 +14,15 @@
       <f:repeatable name="linuxRepo" field="repos" minimum="0" noAddButton="false">
         <table width="100%">
 
-            <f:entry title="${%Repository URL}">
+            <f:entry title="${%Name}" field="name">
               <f:textbox />
             </f:entry>
 
-            <f:entry title="${%Keyfile URL}">
+            <f:entry title="${%Repository URL}" field="uri">
+              <f:textbox />
+            </f:entry>
+
+            <f:entry title="${%Keyfile URL}" field="keyfile">
               <f:textbox />
             </f:entry>
 

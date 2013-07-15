@@ -5,6 +5,7 @@
 package org.jenkinsci.plugins.chroot.extensions;
 
 import com.google.common.collect.ImmutableList;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -17,7 +18,9 @@ import hudson.util.ArgumentListBuilder;
 import java.io.IOException;
 import java.util.List;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
+import org.jenkinsci.plugins.chroot.tools.Repository;
 
 /**
  *
@@ -41,8 +44,7 @@ public final class PBuilderWorker extends ChrootWorker  {
     private ArgumentListBuilder defaultArgumentList(FilePath tarBall, String action){
         return new ArgumentListBuilder().add("sudo").add(getTool())
                 .add(action)
-                .add("--basetgz").add(tarBall.getRemote())
-                .add("--buildplace").add(tarBall.getParent().getRemote());
+                .add("--basetgz").add(tarBall.getRemote());
     }
 
     @Override
@@ -50,20 +52,9 @@ public final class PBuilderWorker extends ChrootWorker  {
         FilePath rootDir = node.getRootPath();
         // get path to tarball
         FilePath tarBall;
+        ChrootToolset toolset = ChrootToolset.getInstallationByName(tool.getName());
         ChrootToolsetProperty property = tool.getProperties().get(ChrootToolsetProperty.class);
-        
-        // take the property into account if it exists
-        if (property != null) {
-            if (property.getTarball().isAbsolute()) {
-                tarBall = new FilePath(property.getTarball());
-            } else {
-                tarBall = rootDir.child(property.getTarball().getPath());
-            }
-            
-        } else {
-            tarBall = rootDir.child(tool.getName() + ".tgz");
-        }
-
+        tarBall = rootDir.child(getName()).child(tool.getName() + ".tgz");
         // build setup command
         ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--create");
         
@@ -73,7 +64,8 @@ public final class PBuilderWorker extends ChrootWorker  {
         }
         
         // run setup
-        if (!tarBall.exists()) {
+        if (!tarBall.exists() || tarBall.lastModified() <= toolset.getLastModified()) {
+            tarBall.getParent().mkdirs();
             int ret;
             //make pbuilder less verbose by ignoring stdout
             ret = node.createLauncher(log).launch().cmds(cmd).stderr(log.getLogger()).join();
@@ -82,20 +74,13 @@ public final class PBuilderWorker extends ChrootWorker  {
                 return null;
             }
             
-            // add repositories
-            String commands = "wget -O - " + "http://packages.isrvdev5.ubimet.at/ubimet.gpg.key" + " | apt-key add -\n"  +
-                    "echo \"deb http://packages.isrvdev5.ubimet.at squeeze main\" > /etc/apt/sources.list.d/ubimet.list\n";
+            FilePath script;
             
-            FilePath script = node.getRootPath().createTextTempFile("chroot", ".sh", commands);
-            cmd = defaultArgumentList(tarBall, "--execute")
-                    .add("--save-after-exec")
-                    .add("--").add(script);
-            ret = node.createLauncher(log).launch().cmds(cmd).stderr(log.getLogger()).join();
-            script.delete();
-            if (ret != 0) {
-                log.fatalError("Could not add custom repositories.");
-                return null;
+            // add repositories
+            if (property != null) {
+                addRepositories(tarBall, node.createLauncher(log), log, property.getRepos());
             }
+
             // add additional packages
             if (property != null && !property.getPackagesList().isEmpty()) {
                 cmd = defaultArgumentList(tarBall, "--update")
@@ -110,7 +95,9 @@ public final class PBuilderWorker extends ChrootWorker  {
             
             // run additional setup command
             if (property != null && !property.getSetupCommand().isEmpty()) {
-                script = rootDir.createTextTempFile("chroot", ".sh", property.getSetupCommand());
+                String shebang = "#!/usr/bin/env bash\n";
+                String command = shebang + "set -e\nset -x verbose\n" + property.getSetupCommand();
+                script = rootDir.createTextTempFile("chroot", ".sh", command);
                 cmd = defaultArgumentList(tarBall, "--execute")
                         .add("--save-after-exec")
                         .add("--").add(script);
@@ -126,18 +113,36 @@ public final class PBuilderWorker extends ChrootWorker  {
     }
 
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands) throws IOException, InterruptedException {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException {
         String userName = super.getUserName(launcher);
+        String groupName = super.getGroupName(launcher, userName);
+        String userHome = build.getWorkspace().getRemote();
         int id = super.getUID(launcher, userName);
-        commands = "cd " + build.getWorkspace().getRemote() + "\n" + commands;
+        int gid = super.getGID(launcher, userName);
+        EnvVars environment = build.getEnvironment(listener);
+        commands = "cd " + build.getWorkspace().getRemote() + "\n" + commands + "\n";
+        commands = "set -e\nset -x verbose\n" + commands;
+        commands = String.format("export BUILD_NUMBER=%s\n", environment.get("BUILD_NUMBER")) + commands;
+        commands = String.format("export BUILD_TAG=%s\n", environment.get("BUILD_TAG")) + commands;
         FilePath script = build.getWorkspace().createTextTempFile("chroot", ".sh", commands);
+        String create_group = String.format("groupadd -g %d %s | :\n", gid, groupName);
+        String create_user = String.format("useradd %s -u %d -g %d -m | : \n", userName, id, gid);
+        String run_script;  
+        if (!runAsRoot){
+            run_script = String.format("chmod u+x %s\n sudo -i -u %s bash -- %s\n", script.getRemote(), userName, script.getRemote());
+        } else {
+            run_script = String.format("chmod u+x %s\n ret=1; bash %s; if [ $? -eq 0 ]; then ret=0; fi;cd %s; chown %s:%s ./ -R; exit $ret\n", script.getRemote(), script.getRemote(),build.getWorkspace().getRemote(), userName, groupName );
+        }
+        String shebang = "#!/usr/bin/env bash\n";
+        String setup_command = shebang + create_group + create_user + run_script;
+        FilePath setup_script = build.getWorkspace().createTextTempFile("chroot", ".sh", setup_command);
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--execute")
-                .add("--bindmounts").add(build.getWorkspace().getRemote())
+                .add("--bindmounts").add(userHome)
                 .add("--basetgz").add(tarBall.getRemote())
-                .add("--buildplace").add(build.getWorkspace())
-                .add("--").add(script);
-        int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
-        script.delete();
+                .add("--").add(setup_script);
+        int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
+            script.delete();
+        setup_script.delete();
         return exitCode == 0;
     }
 
@@ -146,16 +151,44 @@ public final class PBuilderWorker extends ChrootWorker  {
         ArgumentListBuilder b= new ArgumentListBuilder().add("sudo").add(getTool())
                 .add("--update")
                 .add("--basetgz").add(tarBall.getRemote())
-                .add("--buildplace").add(build.getWorkspace())
                 .add("--extrapackages")
                 .add(StringUtils.join(packages, " "));
-        return launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join() == 0;
+        return launcher.launch().cmds(b).stderr(listener.getLogger()).join() == 0;
     }
     
     
     public List<String> getDefaultPackages(){
         return new ImmutableList.Builder<String>()
                 .add("python-software-properties")
+                .add("sudo")
                 .add("wget").build();
+    }
+
+    @Override
+    public boolean addRepositories(FilePath tarBall, Launcher launcher, TaskListener log, List<Repository> repositories) throws IOException, InterruptedException {
+        if (repositories.size() > 0) {
+            String commands = "";
+            for (Repository repo : repositories) {
+                commands += repo.setUpCommand();
+            }
+            FilePath script = tarBall.getParent().createTextTempFile("chroot", ".sh", commands);
+
+            ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--execute")
+                    .add("--save-after-exec")
+                    .add("--").add(script);
+            int ret = launcher.launch().cmds(cmd).stderr(log.getLogger()).join();
+            script.delete();
+            if (ret != 0) {
+                log.fatalError("Could not add custom repositories.");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
+        ArgumentListBuilder a = defaultArgumentList(tarBall, "--clean");
+        return launcher.launch().cmds(a).stdout(listener).stderr(listener.getLogger()).join() == 0;
     }
 }

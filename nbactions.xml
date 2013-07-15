@@ -7,4 +7,11 @@
                 <goal>hpi:run</goal>
             </goals>
         </action>
+        <action>
+            <actionName>CUSTOM-package</actionName>
+            <displayName>package</displayName>
+            <goals>
+                <goal>package</goal>
+            </goals>
+        </action>
     </actions>

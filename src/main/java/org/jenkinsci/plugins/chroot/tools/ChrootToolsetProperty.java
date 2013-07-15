@@ -5,12 +5,11 @@
 package org.jenkinsci.plugins.chroot.tools;
 
 import hudson.Extension;
-import hudson.model.AbstractDescribableImpl;
-import hudson.model.Descriptor;
 import hudson.tools.ToolProperty;
 import hudson.tools.ToolPropertyDescriptor;
 import java.io.File;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
@@ -37,6 +36,9 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
         this.packages = ChrootUtil.split(packages);
         this.setupCommand = setupCommand;
         this.tarball = new File(tarball);
+        if (repos == null){
+            repos = new ArrayList<Repository>();
+        }
         this.repositories = repos;
     }
 
@@ -73,6 +75,9 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
               .append(this.packages.toArray(new String[this.packages.size()]),
               other.packages.toArray(new String[other.packages.size()])
               )
+              .append(this.repositories.toArray(new Repository[this.packages.size()]),
+              other.repositories.toArray(new Repository[other.packages.size()])
+              )
               .append(this.setupCommand, other.setupCommand)
               .append(this.tarball, other.tarball)
               .isEquals();
@@ -85,6 +90,7 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
                 .append(this.setupCommand)
                 .append(this.tarball)
                 .append(this.packages.toArray(new String[this.packages.size()]))
+                .append(this.repositories.toArray(new Repository[this.packages.size()]))
                 .toHashCode();
     }
     
@@ -94,9 +100,7 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
 
     public File getTarball() {
         return tarball;
-    }   
-
-
+    } 
 
     @Extension
     public static final class ChrootToolsetPropertyDescriptor extends ToolPropertyDescriptor {

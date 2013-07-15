@@ -44,11 +44,13 @@ public class ChrootBuilder extends Builder implements Serializable{
     private List<String> packagesFromFile;
     private boolean clear;
     private String command;
+    private boolean loginAsRoot;
 
     @DataBoundConstructor
     public ChrootBuilder(String chrootName, boolean ignoreExit,
             String additionalPackages, String packagesFile, boolean clear,
-            String command) {
+            String command, boolean loginAsRoot) {
+        this.loginAsRoot = loginAsRoot;
         this.chrootName = chrootName;
         this.ignoreExit = ignoreExit;
         this.additionalPackages = ChrootUtil.split(additionalPackages);
@@ -62,6 +64,10 @@ public class ChrootBuilder extends Builder implements Serializable{
         }
     }
 
+    public boolean isLoginAsRoot() {
+        return loginAsRoot;
+    }
+    
     public String getChrootName() {
         return chrootName;
     }
@@ -92,12 +98,21 @@ public class ChrootBuilder extends Builder implements Serializable{
         ChrootToolset installation = ChrootToolset.getInstallationByName(this.chrootName);
         installation = installation.forNode(Computer.currentComputer().getNode(), listener);
         installation = installation.forEnvironment(env);
+        if (installation.getHome() == null) {
+            listener.fatalError("Installation of chroot environment failed");
+            return false;
+        }
         FilePath tarBall = new FilePath(Computer.currentComputer().getChannel(), installation.getHome());
-        FilePath workerTarBall = build.getWorkspace().child(tarBall.getName());
+        FilePath workerTarBall = build.getWorkspace().child(this.chrootName).child(tarBall.getName());
+        workerTarBall.getParent().mkdirs();
         
         // force environment recreation when clear is selected
-        if (this.clear && workerTarBall.exists()){
-            workerTarBall.delete();
+        if (this.clear){
+            boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
+            if (ret == false) {
+            listener.fatalError("Chroot environment cleanup failed");
+            return ret || ignoreExit;
+            }
         }
         
         if (! workerTarBall.exists() || tarBall.lastModified() > workerTarBall.lastModified()){
@@ -118,9 +133,8 @@ public class ChrootBuilder extends Builder implements Serializable{
                 listener.fatalError("Installing additional packages in chroot environment failed.");   
                 return ret || ignoreExit;
             }
-        }
-        
-        return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.command);
+        }        
+        return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.command, isLoginAsRoot());
     }
 
     @Extension
