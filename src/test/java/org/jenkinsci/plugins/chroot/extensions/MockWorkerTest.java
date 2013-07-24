@@ -57,7 +57,7 @@ public class MockWorkerTest {
 
     @Test
     public void testSomeMethod() {
-        fail("The test case is a prototype.");
+        
     }
     
     @Test

@@ -146,12 +146,14 @@ public final class PBuilderWorker extends ChrootWorker  {
         FilePath script = build.getWorkspace().createTextTempFile("chroot", ".sh", commands);
         String create_group = String.format("groupadd -g %d %s | :\n", gid, groupName);
         String create_user = String.format("useradd %s -u %d -g %d -m | : \n", userName, id, gid);
-        String run_script;  
-        if (!runAsRoot){
-            run_script = String.format("chmod u+x %s\n sudo -i -u %s bash -- %s\n", script.getRemote(), userName, script.getRemote());
-        } else {
-            run_script = String.format("chmod u+x %s\n ret=1; bash %s; if [ $? -eq 0 ]; then ret=0; fi;cd %s; chown %s:%s ./ -R; exit $ret\n", script.getRemote(), script.getRemote(),build.getWorkspace().getRemote(), userName, groupName );
+        String run_script;
+        String sudoUser = userName;
+        if (runAsRoot){
+            sudoUser = "root";
         }
+
+        run_script = String.format("chmod u+x %s\n ret=1; sudo -i -u %s bash -- %s; if [ $? -eq 0 ]; then ret=0; fi;cd %s; chown %s:%s ./ -R; exit $ret\n", script.getRemote(), sudoUser, script.getRemote(), build.getWorkspace().getRemote(), userName, groupName);
+
         String shebang = "#!/usr/bin/env bash\n";
         String setup_command = shebang + create_group + create_user + run_script;
         FilePath setup_script = build.getWorkspace().createTextTempFile("chroot", ".sh", setup_command);
