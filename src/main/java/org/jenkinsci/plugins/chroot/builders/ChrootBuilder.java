@@ -39,7 +39,6 @@ import hudson.util.ListBoxModel;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import javax.servlet.ServletException;
@@ -54,7 +53,7 @@ import org.kohsuke.stapler.QueryParameter;
  *
  * @author roman
  */
-public class ChrootBuilder extends Builder implements Serializable{
+public class ChrootBuilder extends Builder implements Serializable {
 
     private String chrootName;
     private boolean ignoreExit;
@@ -64,11 +63,21 @@ public class ChrootBuilder extends Builder implements Serializable{
     private boolean clear;
     private String command;
     private boolean loginAsRoot;
+    private boolean noUpdate;
+    private boolean forceInstall;
+
+    public boolean isForceInstall() {
+        return forceInstall;
+    }
+
+    public boolean isNoUpdate() {
+        return noUpdate;
+    }
 
     @DataBoundConstructor
     public ChrootBuilder(String chrootName, boolean ignoreExit,
             String additionalPackages, String packagesFile, boolean clear,
-            String command, boolean loginAsRoot) {
+            String command, boolean loginAsRoot, boolean noUpdate, boolean forceInstall) {
         this.loginAsRoot = loginAsRoot;
         this.chrootName = chrootName;
         this.ignoreExit = ignoreExit;
@@ -76,6 +85,8 @@ public class ChrootBuilder extends Builder implements Serializable{
         this.packagesFile = packagesFile;
         this.clear = clear;
         this.command = command;
+        this.noUpdate = noUpdate;
+        this.forceInstall = forceInstall;
         try {
             this.packagesFromFile = ChrootUtil.split(FileUtils.readFileToString(
                     new File(packagesFile)));
@@ -86,7 +97,7 @@ public class ChrootBuilder extends Builder implements Serializable{
     public boolean isLoginAsRoot() {
         return loginAsRoot;
     }
-    
+
     public String getChrootName() {
         return chrootName;
     }
@@ -124,20 +135,20 @@ public class ChrootBuilder extends Builder implements Serializable{
         FilePath tarBall = new FilePath(Computer.currentComputer().getChannel(), installation.getHome());
         FilePath workerTarBall = build.getWorkspace().child(this.chrootName).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
-        
+
         // force environment recreation when clear is selected
-        if (this.clear){
+        if (this.clear) {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
             if (ret == false) {
-            listener.fatalError("Chroot environment cleanup failed");
-            return ret || ignoreExit;
+                listener.fatalError("Chroot environment cleanup failed");
+                return ret || ignoreExit;
             }
         }
-        
-        if (! workerTarBall.exists() || tarBall.lastModified() > workerTarBall.lastModified()){
+
+        if (!workerTarBall.exists() || tarBall.lastModified() > workerTarBall.lastModified()) {
             tarBall.copyTo(workerTarBall);
         }
-        
+
         //install extra packages
         List<String> packages = new LinkedList<String>(this.additionalPackages);
         FilePath packageFile = new FilePath(build.getWorkspace(), getPackagesFile());
@@ -145,14 +156,20 @@ public class ChrootBuilder extends Builder implements Serializable{
             String packageFilePackages = packageFile.readToString();
             packages.addAll(ChrootUtil.split(packageFilePackages));
         }
-        
+
         if (!packages.isEmpty()) {
-            boolean ret = installation.getChrootWorker().installPackages(build, launcher, listener, workerTarBall, packages);
+            boolean ret = installation.getChrootWorker().installPackages(build, launcher, listener, workerTarBall, packages, isForceInstall());
             if (ret == false) {
-                listener.fatalError("Installing additional packages in chroot environment failed.");   
+                listener.fatalError("Installing additional packages in chroot environment failed.");
                 return ret || ignoreExit;
             }
-        }        
+        } else if (!this.isNoUpdate()) {
+            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, workerTarBall);
+            if (ret == false) {
+                listener.fatalError("Updating repository indices in chroot environment failed.");
+                return ret || ignoreExit;
+            }
+        }
         return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.command, isLoginAsRoot());
     }
 
@@ -176,10 +193,10 @@ public class ChrootBuilder extends Builder implements Serializable{
         public String getDisplayName() {
             return "Chroot Builder";
         }
-        
+
         public FormValidation doCheckPackagesFile(@QueryParameter String value)
                 throws IOException, ServletException, InterruptedException {
-                if (value.length() != 0) {
+            if (value.length() != 0) {
                 FilePath x = new FilePath(new File(value));
                 if (!x.exists()) {
                     return FormValidation.warning("File does not yet exist.");
@@ -188,6 +205,6 @@ public class ChrootBuilder extends Builder implements Serializable{
                 }
             }
             return FormValidation.ok();
-        }        
+        }
     }
 }

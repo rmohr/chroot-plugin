@@ -168,15 +168,18 @@ public final class PBuilderWorker extends ChrootWorker  {
     }
 
     @Override
-    public boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages) throws IOException, InterruptedException {
+    public boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException {
         ArgumentListBuilder b= new ArgumentListBuilder().add("sudo").add(getTool())
                 .add("--update")
                 .add("--basetgz").add(tarBall.getRemote())
                 .add("--extrapackages")
                 .add(StringUtils.join(packages, " "));
+        if (forceInstall){
+            b = b.add("--allow-untrusted");
+        }
         return launcher.launch().cmds(b).stderr(listener.getLogger()).join() == 0;
     }
-    
+
     
     public List<String> getDefaultPackages(){
         return new ImmutableList.Builder<String>()
@@ -211,5 +214,13 @@ public final class PBuilderWorker extends ChrootWorker  {
     public boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
         ArgumentListBuilder a = defaultArgumentList(tarBall, "--clean");
         return launcher.launch().cmds(a).stdout(listener).stderr(listener.getLogger()).join() == 0;
+    }
+
+    @Override
+    public boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
+        ArgumentListBuilder b= new ArgumentListBuilder().add("sudo").add(getTool())
+                .add("--update")
+                .add("--basetgz").add(tarBall.getRemote());
+        return launcher.launch().cmds(b).stderr(listener.getLogger()).join() == 0;
     }
 }

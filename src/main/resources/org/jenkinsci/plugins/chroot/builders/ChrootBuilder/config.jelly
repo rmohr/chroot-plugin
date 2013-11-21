@@ -41,6 +41,12 @@
 <f:entry field="ignoreExit" title="Ignore exit code">
 <f:checkbox />
 </f:entry>
+<f:entry field="noUpdate" title="Do not update repository indices">
+<f:checkbox />
+</f:entry>
+<f:entry field="forceInstall" title="Force installation of packages">
+<f:checkbox />
+</f:entry>
 </f:advanced>
 
 
