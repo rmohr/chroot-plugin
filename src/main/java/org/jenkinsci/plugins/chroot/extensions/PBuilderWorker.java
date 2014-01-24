@@ -36,6 +36,7 @@ import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
@@ -141,8 +142,9 @@ public final class PBuilderWorker extends ChrootWorker  {
         EnvVars environment = build.getEnvironment(listener);
         commands = "cd " + build.getWorkspace().getRemote() + "\n" + commands + "\n";
         commands = "set -e\nset -x verbose\n" + commands;
-        commands = String.format("export BUILD_NUMBER=%s\n", environment.get("BUILD_NUMBER")) + commands;
-        commands = String.format("export BUILD_TAG=%s\n", environment.get("BUILD_TAG")) + commands;
+        for (Map.Entry<String, String> entry : environment.entrySet()) {
+            commands = String.format("export %s=%s\n", entry.getKey(), entry.getValue()) + commands;
+        }
         FilePath script = build.getWorkspace().createTextTempFile("chroot", ".sh", commands);
         String create_group = String.format("groupadd -g %d %s | :\n", gid, groupName);
         String create_user = String.format("useradd %s -u %d -g %d -m | : \n", userName, id, gid);

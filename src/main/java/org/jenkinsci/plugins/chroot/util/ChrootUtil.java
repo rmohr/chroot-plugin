@@ -34,9 +34,17 @@ import java.util.List;
 public class ChrootUtil {
     
     
-    public static List<String> split(String packages){
-        if (!packages.isEmpty()){
-            return Arrays.asList(packages.split("\\s+"));
+    public static List<String> splitPackages(String packages){
+        if (packages != null && !packages.isEmpty()){
+            return Arrays.asList(packages.trim().split("\\s*,\\s*|\\s*;\\s*|\\s+"));
+        } else{
+            return new LinkedList<String>();
+        }
+    }
+    
+    public static List<String> splitFiles(String files){
+        if (files != null && !files.isEmpty()){
+            return Arrays.asList(files.trim().split("\\s*,\\s*|\\s*;\\s*"));
         } else{
             return new LinkedList<String>();
         }

@@ -32,7 +32,7 @@
 </f:entry>
 
 <f:advanced>
-<f:entry field="packagesFile" title="Requirements File">
+<f:entry field="packagesFile" title="Requirement Files">
 <f:textbox/>
 </f:entry>
 <f:entry field="additionalPackages" title="Requirements">

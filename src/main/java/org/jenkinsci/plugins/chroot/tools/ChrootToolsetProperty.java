@@ -52,7 +52,7 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
     @DataBoundConstructor
     public ChrootToolsetProperty(String setupCommand, String packages, String tarball, List<Repository> repos) {
         super();
-        this.packages = ChrootUtil.split(packages);
+        this.packages = ChrootUtil.splitPackages(packages);
         this.setupCommand = setupCommand;
         this.tarball = new File(tarball);
         if (repos == null){

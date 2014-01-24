@@ -81,16 +81,18 @@ public class ChrootBuilder extends Builder implements Serializable {
         this.loginAsRoot = loginAsRoot;
         this.chrootName = chrootName;
         this.ignoreExit = ignoreExit;
-        this.additionalPackages = ChrootUtil.split(additionalPackages);
+        this.additionalPackages = ChrootUtil.splitPackages(additionalPackages);
         this.packagesFile = packagesFile;
         this.clear = clear;
         this.command = command;
         this.noUpdate = noUpdate;
         this.forceInstall = forceInstall;
-        try {
-            this.packagesFromFile = ChrootUtil.split(FileUtils.readFileToString(
-                    new File(packagesFile)));
-        } catch (IOException ex) {
+        for (String filepath : ChrootUtil.splitFiles(packagesFile)) {
+            try {
+                this.packagesFromFile.addAll(ChrootUtil.splitPackages(FileUtils.readFileToString(
+                        new File(filepath))));
+            } catch (IOException ex) {
+            }
         }
     }
 
@@ -151,10 +153,15 @@ public class ChrootBuilder extends Builder implements Serializable {
 
         //install extra packages
         List<String> packages = new LinkedList<String>(this.additionalPackages);
-        FilePath packageFile = new FilePath(build.getWorkspace(), getPackagesFile());
-        if (packageFile.exists() && !packageFile.isDirectory()) {
-            String packageFilePackages = packageFile.readToString();
-            packages.addAll(ChrootUtil.split(packageFilePackages));
+        for (String packagesFile : ChrootUtil.splitFiles(getPackagesFile())) {
+            try {
+                FilePath packageFile = new FilePath(build.getWorkspace(), packagesFile);
+                if (packageFile.exists() && !packageFile.isDirectory()) {
+                    String packageFilePackages = packageFile.readToString();
+                    packages.addAll(ChrootUtil.splitPackages(packageFilePackages));
+                }
+            } catch (IOException ex) {
+            }
         }
 
         if (!packages.isEmpty()) {
@@ -196,13 +203,25 @@ public class ChrootBuilder extends Builder implements Serializable {
 
         public FormValidation doCheckPackagesFile(@QueryParameter String value)
                 throws IOException, ServletException, InterruptedException {
-            if (value.length() != 0) {
-                FilePath x = new FilePath(new File(value));
-                if (!x.exists()) {
-                    return FormValidation.warning("File does not yet exist.");
-                } else if (x.isDirectory()) {
-                    return FormValidation.error("This is a directory. Enter a file.");
+            List<String> validationList = new LinkedList<String>();
+            Boolean warn = false;
+            Boolean error = false;
+            for (String file : ChrootUtil.splitFiles(value)) {
+                if (file.length() != 0) {
+                    FilePath x = new FilePath(new File(file));
+                    if (!x.exists()) {
+                        warn = true;
+                        validationList.add(String.format("File %s does not yet exist.", file));
+                    } else if (x.isDirectory()) {
+                        error = true;
+                        validationList.add(String.format("%s is a directory. Enter a file.", file));
+                    }
                 }
+            }
+            if (error == true) {
+                        return FormValidation.error(StringUtils.join(validationList.listIterator(), "\n"));                 
+            }else if (warn == true){
+                        return FormValidation.warning(StringUtils.join(validationList.listIterator(), "\n"));                
             }
             return FormValidation.ok();
         }
