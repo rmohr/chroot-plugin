@@ -143,7 +143,7 @@ public final class PBuilderWorker extends ChrootWorker  {
         commands = "cd " + build.getWorkspace().getRemote() + "\n" + commands + "\n";
         commands = "set -e\nset -x verbose\n" + commands;
         for (Map.Entry<String, String> entry : environment.entrySet()) {
-            commands = String.format("export %s=%s\n", entry.getKey(), entry.getValue()) + commands;
+            commands = String.format("if [ -z ${%s} ]; then export %s=\"%s\"; fi;\n", entry.getKey(), entry.getKey(), entry.getValue()) + commands;
         }
         FilePath script = build.getWorkspace().createTextTempFile("chroot", ".sh", commands);
         String create_group = String.format("groupadd -g %d %s | :\n", gid, groupName);

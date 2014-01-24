@@ -4,10 +4,7 @@
  */
 package org.jenkinsci.plugins.chroot.util;
 
-import com.gargoylesoftware.htmlunit.html.Util;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
