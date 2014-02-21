@@ -48,11 +48,17 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
     private String setupCommand;
     private File tarball;
     private List<Repository> repositories;
+    private String setupArguments;
+
+    public String getSetupArguments() {
+        return setupArguments;
+    }
 
     @DataBoundConstructor
-    public ChrootToolsetProperty(String setupCommand, String packages, String tarball, List<Repository> repos) {
+    public ChrootToolsetProperty(String setupCommand, String packages, String tarball, String setupArguments, List<Repository> repos) {
         super();
         this.packages = ChrootUtil.splitPackages(packages);
+        this.setupArguments = setupArguments;
         this.setupCommand = setupCommand;
         this.tarball = new File(tarball);
         if (repos == null){
@@ -99,6 +105,7 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
               )
               .append(this.setupCommand, other.setupCommand)
               .append(this.tarball, other.tarball)
+              .append(this.setupArguments, other.setupArguments)
               .isEquals();
     }
 
@@ -110,6 +117,7 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
                 .append(this.tarball)
                 .append(this.packages.toArray(new String[this.packages.size()]))
                 .append(this.repositories.toArray(new Repository[this.packages.size()]))
+                .append(this.setupArguments)
                 .toHashCode();
     }
     

@@ -83,6 +83,10 @@ public final class PBuilderWorker extends ChrootWorker  {
             cmd.add("--extrapackages").add(StringUtils.join(getDefaultPackages(), " "));
         }
         
+        if (!property.getSetupArguments().isEmpty()){
+            cmd.add(property.getSetupArguments().split("\\s+"));
+        }
+        
         // run setup
         if (!tarBall.exists() || tarBall.lastModified() <= toolset.getLastModified()) {
             tarBall.getParent().mkdirs();

@@ -39,7 +39,7 @@ public class ChrootToolsetTest extends HudsonTestCase {
     }
 
     public void testConfigChanged(){
-        ToolProperty<ChrootToolset> toolProperty = new ChrootToolsetProperty("", "wget", "test-tool", null);
+        ToolProperty<ChrootToolset> toolProperty = new ChrootToolsetProperty("", "wget", "test-tool","", null);
         List<ToolProperty<ChrootToolset> > properties = new ArrayList<ToolProperty<ChrootToolset>>();
         properties.add(toolProperty);
         ChrootToolset tool = new ChrootToolset("test-tool", "./", "mock", properties);
@@ -54,7 +54,7 @@ public class ChrootToolsetTest extends HudsonTestCase {
         descriptor.setInstallations(tool);        
         assertFalse(tool.getLastModified() == timestamp);
         timestamp = tool.getLastModified();
-        toolProperty = new ChrootToolsetProperty("", "wget", "test-tool1", null);
+        toolProperty = new ChrootToolsetProperty("", "wget", "test-tool1","", null);
         properties = new ArrayList<ToolProperty<ChrootToolset>>();
         properties.add(toolProperty);
         tool = new ChrootToolset("test-tool", "./a", "mock", properties);
