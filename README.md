@@ -16,7 +16,11 @@ Installation from source
 ```bash
 git clone https://github.com/rmohr/chroot-plugin
 cd chroot-plugin
-mvn hpi:package
+mvn install
+```
+You will find the resulting hpi file here: 
+```
+./target/chroot.hpi
 ```
 
 Using pbuilder
