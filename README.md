@@ -42,7 +42,8 @@ Using the plugin
 
 First Create chroot environments in _Manage Jenkins_ > _Chroot Environments_:
 ![chroot configuration](minimal_configuration.png)
-Make sure that the autoinstall option is enabled.
+
+**Make sure that the autoinstall option is enabled.**
 
 A buildstep _chroot builder_ is now available where you can select a preconfigured builder:
 ![buildstep configuration](buildstep.png)
