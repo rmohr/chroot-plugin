@@ -16,7 +16,11 @@ Installation from source
 ```bash
 git clone https://github.com/rmohr/chroot-plugin
 cd chroot-plugin
-mvn hpi:package
+mvn install
+```
+You will find the resulting hpi file here: 
+```
+./target/chroot.hpi
 ```
 
 Using pbuilder
@@ -27,13 +31,22 @@ run /usr/sbin/pbuilder via sudo. Make sure to protect your jenkins installation
 properly, because pbuilder is NOT a secure  and fully isolated
 environment.
 
+An appropriate /etc/sudoers entry might look like this:
+
+```
+jenkins ALL=(ALL) NOPASSWD: /usr/sbin/pbuilder
+```
+
 Using the plugin
 ================
 
- * Create chroot environments in _Manage Jenkins_ > _Chroot Environments_
- * A buildstep _chroot builder_ is now available where you can select a preconfigured builder.
- 
-TODO
+First Create chroot environments in _Manage Jenkins_ > _Chroot Environments_:
+![chroot configuration](minimal_configuration.png)
+
+**Make sure that the autoinstall option is enabled.**
+
+A buildstep _chroot builder_ is now available where you can select a preconfigured builder:
+![buildstep configuration](buildstep.png)
 
 Future Plans
 ============
