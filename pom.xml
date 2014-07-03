@@ -11,7 +11,9 @@
   <version>0.2-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
-  <url>http://wiki.jenkins-ci.org/display/JENKINS/chroot+Plugin</url>
+  <name>Chroot Plugin</name>
+  <description>Support for disposable chroot environments (pbuilder), which can be very usefull for C and C++ projects</description>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/chroot+Plugin</url>
 
   <scm>
     <connection>scm:git:ssh://github.com/jenkinsci/chroot-plugin.git</connection>
