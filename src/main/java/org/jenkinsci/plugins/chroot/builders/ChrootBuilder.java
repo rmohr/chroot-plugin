@@ -54,7 +54,7 @@ import org.kohsuke.stapler.QueryParameter;
  * @author roman
  */
 public class ChrootBuilder extends Builder implements Serializable {
-
+    
     private String chrootName;
     private boolean ignoreExit;
     private List<String> additionalPackages;
@@ -65,19 +65,19 @@ public class ChrootBuilder extends Builder implements Serializable {
     private boolean loginAsRoot;
     private boolean noUpdate;
     private boolean forceInstall;
-
+    
     public boolean isForceInstall() {
         return forceInstall;
     }
-
+    
     public boolean isNoUpdate() {
         return noUpdate;
     }
-
+    
     @DataBoundConstructor
     public ChrootBuilder(String chrootName, boolean ignoreExit,
             String additionalPackages, String packagesFile, boolean clear,
-            String command, boolean loginAsRoot, boolean noUpdate, boolean forceInstall) {
+            String command, boolean loginAsRoot, boolean noUpdate, boolean forceInstall) throws IOException {
         this.loginAsRoot = loginAsRoot;
         this.chrootName = chrootName;
         this.ignoreExit = ignoreExit;
@@ -88,42 +88,39 @@ public class ChrootBuilder extends Builder implements Serializable {
         this.noUpdate = noUpdate;
         this.forceInstall = forceInstall;
         for (String filepath : ChrootUtil.splitFiles(packagesFile)) {
-            try {
-                this.packagesFromFile.addAll(ChrootUtil.splitPackages(FileUtils.readFileToString(
-                        new File(filepath))));
-            } catch (IOException ex) {
-            }
+            this.packagesFromFile.addAll(ChrootUtil.splitPackages(FileUtils.readFileToString(
+                    new File(filepath))));
         }
     }
-
+    
     public boolean isLoginAsRoot() {
         return loginAsRoot;
     }
-
+    
     public String getChrootName() {
         return chrootName;
     }
-
+    
     public String getCommand() {
         return command;
     }
-
+    
     public boolean isIgnoreExit() {
         return ignoreExit;
     }
-
+    
     public String getAdditionalPackages() {
         return StringUtils.join(additionalPackages, " ");
     }
-
+    
     public String getPackagesFile() {
         return packagesFile;
     }
-
+    
     public boolean isClear() {
         return clear;
     }
-
+    
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
@@ -139,31 +136,29 @@ public class ChrootBuilder extends Builder implements Serializable {
         workerTarBall.getParent().mkdirs();
 
         // force environment recreation when clear is selected
-        if (this.clear) {
+        if (isClear()) {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Chroot environment cleanup failed");
                 return ret || ignoreExit;
             }
         }
-
-        if (!workerTarBall.exists() || tarBall.lastModified() > workerTarBall.lastModified()) {
+        
+        if (!workerTarBall.exists() || ChrootUtil.isFileIntact(workerTarBall) || tarBall.lastModified() > workerTarBall.lastModified()) {
             tarBall.copyTo(workerTarBall);
+            ChrootUtil.getDigestFile(tarBall).copyTo(ChrootUtil.getDigestFile(workerTarBall));
         }
 
         //install extra packages
         List<String> packages = new LinkedList<String>(this.additionalPackages);
         for (String packagesFile : ChrootUtil.splitFiles(getPackagesFile())) {
-            try {
-                FilePath packageFile = new FilePath(build.getWorkspace(), packagesFile);
-                if (packageFile.exists() && !packageFile.isDirectory()) {
-                    String packageFilePackages = packageFile.readToString();
-                    packages.addAll(ChrootUtil.splitPackages(packageFilePackages));
-                }
-            } catch (IOException ex) {
+            FilePath packageFile = new FilePath(build.getWorkspace(), packagesFile);
+            if (packageFile.exists() && !packageFile.isDirectory()) {
+                String packageFilePackages = packageFile.readToString();
+                packages.addAll(ChrootUtil.splitPackages(packageFilePackages));
             }
         }
-
+        
         if (!packages.isEmpty()) {
             boolean ret = installation.getChrootWorker().installPackages(build, launcher, listener, workerTarBall, packages, isForceInstall());
             if (ret == false) {
@@ -179,10 +174,10 @@ public class ChrootBuilder extends Builder implements Serializable {
         }
         return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.command, isLoginAsRoot());
     }
-
+    
     @Extension
     public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
-
+        
         public ListBoxModel doFillChrootNameItems() {
             ListBoxModel items = new ListBoxModel();
             for (ChrootToolset set : ChrootToolset.list()) {
@@ -190,24 +185,23 @@ public class ChrootBuilder extends Builder implements Serializable {
             }
             return items;
         }
-
+        
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return FreeStyleProject.class.isAssignableFrom(jobType);
         }
-
+        
         @Override
         public String getDisplayName() {
             return "Chroot Builder";
         }
-
+        
         public FormValidation doCheckPackagesFile(@QueryParameter String value)
                 throws IOException, ServletException, InterruptedException {
             List<String> validationList = new LinkedList<String>();
             Boolean warn = false;
             Boolean error = false;
             for (String file : ChrootUtil.splitFiles(value)) {
-                if (file.length() != 0) {
                     FilePath x = new FilePath(new File(file));
                     if (!x.exists()) {
                         warn = true;
@@ -216,12 +210,11 @@ public class ChrootBuilder extends Builder implements Serializable {
                         error = true;
                         validationList.add(String.format("%s is a directory. Enter a file.", file));
                     }
-                }
             }
             if (error == true) {
-                        return FormValidation.error(StringUtils.join(validationList.listIterator(), "\n"));                 
-            }else if (warn == true){
-                        return FormValidation.warning(StringUtils.join(validationList.listIterator(), "\n"));                
+                return FormValidation.error(StringUtils.join(validationList.listIterator(), "\n"));
+            } else if (warn == true) {
+                return FormValidation.warning(StringUtils.join(validationList.listIterator(), "\n"));
             }
             return FormValidation.ok();
         }
