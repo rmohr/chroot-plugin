@@ -23,6 +23,7 @@
  */
 package org.jenkinsci.plugins.chroot.extensions;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -82,7 +83,7 @@ public final class PBuilderWorker extends ChrootWorker {
             cmd.add("--extrapackages").add(StringUtils.join(getDefaultPackages(), " "));
         }
         
-        if (!property.getSetupArguments().isEmpty()) {
+        if (property != null && !Strings.isNullOrEmpty(property.getSetupArguments())) {
             cmd.add(property.getSetupArguments().split("\\s+"));
         }
 
