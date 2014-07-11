@@ -23,7 +23,14 @@
  */
 package org.jenkinsci.plugins.chroot.util;
 
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
+import hudson.FilePath;
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -32,22 +39,55 @@ import java.util.List;
  * @author rmohr
  */
 public class ChrootUtil {
-    
-    
-    public static List<String> splitPackages(String packages){
-        if (packages != null && !packages.isEmpty()){
-            return Arrays.asList(packages.trim().split("\\s*,\\s*|\\s*;\\s*|\\s+"));
-        } else{
-            return new LinkedList<String>();
+
+    public static final String MD5_SUFFIX = ".md5";
+    private static final Splitter stringSplitter = Splitter.on(CharMatcher.anyOf(",; \t")).trimResults().omitEmptyStrings();
+
+    public static List<String> splitPackages(String packages) {
+        if (packages != null) {
+            return Lists.newArrayList(stringSplitter.split(packages));
+        } else {
+            return Lists.newArrayList();
         }
     }
-    
-    public static List<String> splitFiles(String files){
-        if (files != null && !files.isEmpty()){
-            return Arrays.asList(files.trim().split("\\s*,\\s*|\\s*;\\s*"));
-        } else{
-            return new LinkedList<String>();
+
+    public static List<String> splitFiles(String files) {
+        if (files != null) {
+            return Lists.newArrayList(stringSplitter.split(files));
+        } else {
+            return Lists.newArrayList();
         }
     }
-    
+
+    public static FilePath saveDigest(FilePath file) throws IOException, InterruptedException {
+        FilePath md5 = getDigestFile(file);
+        md5.write(file.digest(), null);
+        return md5;
+    }
+
+    public static String loadDigest(FilePath file) throws IOException, InterruptedException {
+        FilePath md5 = getDigestFile(file);
+        if (!md5.exists()) {
+            return null;
+        }
+        return md5.readToString();
+    }
+
+    public static FilePath getDigestFile(FilePath file) {
+        return new FilePath(file.getParent(), file.getName() + MD5_SUFFIX);
+    }
+
+    public static boolean isFileIntact(FilePath file) throws IOException, InterruptedException {
+        if (!file.exists()) {
+            return false;
+        }
+        String digest = loadDigest(file);
+        if (digest == null) {
+            return false;
+        }
+        if (!file.digest().equals(digest)) {
+            return false;
+        }
+        return true;
+    }
 }
