@@ -125,13 +125,13 @@ public class ChrootBuilder extends Builder implements Serializable {
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
         ChrootToolset installation = ChrootToolset.getInstallationByName(this.chrootName);
-        installation = installation.forNode(Computer.currentComputer().getNode(), listener);
+        installation = installation.forNode(build.getBuiltOn(), listener);
         installation = installation.forEnvironment(env);
         if (installation.getHome() == null) {
             listener.fatalError("Installation of chroot environment failed");
             return false;
         }
-        FilePath tarBall = new FilePath(Computer.currentComputer().getChannel(), installation.getHome());
+        FilePath tarBall = new FilePath(build.getBuiltOn().getChannel(), installation.getHome());
         FilePath workerTarBall = build.getWorkspace().child(this.chrootName).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
 
