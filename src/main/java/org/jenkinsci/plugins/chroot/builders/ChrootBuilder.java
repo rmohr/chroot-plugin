@@ -144,7 +144,7 @@ public class ChrootBuilder extends Builder implements Serializable {
             }
         }
         
-        if (!workerTarBall.exists() || ChrootUtil.isFileIntact(workerTarBall) || tarBall.lastModified() > workerTarBall.lastModified()) {
+        if (!workerTarBall.exists() || !ChrootUtil.isFileIntact(workerTarBall) || tarBall.lastModified() > workerTarBall.lastModified()) {
             tarBall.copyTo(workerTarBall);
             ChrootUtil.getDigestFile(tarBall).copyTo(ChrootUtil.getDigestFile(workerTarBall));
         }
