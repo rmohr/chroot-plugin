@@ -50,7 +50,7 @@ public class ChrootToolsetTest extends HudsonTestCase {
         tool = new ChrootToolset("test-tool", "./", "mock", properties);        
         descriptor.setInstallations(tool);
         assertEquals(timestamp, tool.getLastModified());
-        tool = new ChrootToolset("test-tool", "./a", "mock", properties);
+        tool = new ChrootToolset("test-tool", "./a", "mock1", properties);
         descriptor.setInstallations(tool);        
         assertFalse(tool.getLastModified() == timestamp);
         timestamp = tool.getLastModified();
