@@ -12,7 +12,7 @@
 
   <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>chroot</artifactId>
-  <version>0.1.2</version>
+  <version>0.2-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Chroot Plugin</name>
