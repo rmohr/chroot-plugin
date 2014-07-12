@@ -135,7 +135,6 @@ public class ChrootBuilder extends Builder implements Serializable {
         FilePath tarBall = new FilePath(Computer.currentComputer().getChannel(), installation.getHome());
         FilePath workerTarBall = build.getWorkspace().child(this.chrootName).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
-
         // force environment recreation when clear is selected
         if (this.clear) {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
@@ -146,7 +145,11 @@ public class ChrootBuilder extends Builder implements Serializable {
         }
 
         if (!workerTarBall.exists() || tarBall.lastModified() > workerTarBall.lastModified()) {
-            tarBall.copyTo(workerTarBall);
+            if (!tarBall.isDirectory()) {
+                tarBall.copyTo(workerTarBall);
+            } else {
+                tarBall.copyRecursiveTo(workerTarBall);
+            }
         }
 
         //install extra packages
