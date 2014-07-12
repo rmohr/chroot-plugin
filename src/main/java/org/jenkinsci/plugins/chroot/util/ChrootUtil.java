@@ -25,13 +25,9 @@ package org.jenkinsci.plugins.chroot.util;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import hudson.FilePath;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -41,7 +37,7 @@ import java.util.List;
 public class ChrootUtil {
 
     public static final String MD5_SUFFIX = ".md5";
-    private static final Splitter stringSplitter = Splitter.on(CharMatcher.anyOf(",; \t")).trimResults().omitEmptyStrings();
+    private static final Splitter stringSplitter = Splitter.on(CharMatcher.anyOf(",; \t\n\r")).trimResults().omitEmptyStrings();
 
     public static List<String> splitPackages(String packages) {
         if (packages != null) {

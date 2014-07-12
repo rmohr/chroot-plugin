@@ -28,8 +28,8 @@ public class ChrootUtilTest {
 
     @Test
     public void testSplit() {
-        String packages = " a b, c ; d,e;f    g,h\ti ";
-        String[] lst = {"a", "b", "c", "d", "e", "f", "g", "h", "i"};
+        String packages = " a b, c ; d,e;f    g,h\ti\nj\r\nk ";
+        String[] lst = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"};
         assertEquals(Arrays.asList(lst), ChrootUtil.splitPackages(packages));
     }
 
