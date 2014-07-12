@@ -23,6 +23,7 @@
  */
 package org.jenkinsci.plugins.chroot.extensions;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -41,32 +42,31 @@ import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
 import org.jenkinsci.plugins.chroot.tools.Repository;
+import org.jenkinsci.plugins.chroot.util.ChrootUtil;
 
 /**
  *
  * @author rmohr
  */
-
 @Extension
-public final class PBuilderWorker extends ChrootWorker  {
-
+public final class PBuilderWorker extends ChrootWorker {
+    
     @Override
     public String getName() {
         return "pbuilder";
     }
-
+    
     @Override
     public String getTool() {
         return "/usr/sbin/pbuilder";
     }
     
-    
-    private ArgumentListBuilder defaultArgumentList(FilePath tarBall, String action){
+    private ArgumentListBuilder defaultArgumentList(FilePath tarBall, String action) {
         return new ArgumentListBuilder().add("sudo").add(getTool())
                 .add(action)
                 .add("--basetgz").add(tarBall.getRemote());
     }
-
+    
     @Override
     public FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
         FilePath rootDir = node.getRootPath();
@@ -77,18 +77,21 @@ public final class PBuilderWorker extends ChrootWorker  {
         tarBall = rootDir.child(getName()).child(tool.getName() + ".tgz");
         // build setup command
         ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--create");
-        
+
         // don't forget to install additional packages
         if (!getDefaultPackages().isEmpty()) {
             cmd.add("--extrapackages").add(StringUtils.join(getDefaultPackages(), " "));
         }
         
-        if (!property.getSetupArguments().isEmpty()){
+        if (property != null && !Strings.isNullOrEmpty(property.getSetupArguments())) {
             cmd.add(property.getSetupArguments().split("\\s+"));
         }
-        
+
         // run setup
-        if (!tarBall.exists() || tarBall.lastModified() <= toolset.getLastModified()) {
+        if (!tarBall.exists() || !ChrootUtil.isFileIntact(tarBall) || tarBall.lastModified() <= toolset.getLastModified()) {
+            ChrootUtil.getDigestFile(tarBall).delete();
+            tarBall.delete();
+            
             tarBall.getParent().mkdirs();
             int ret;
             //make pbuilder less verbose by ignoring stdout
@@ -97,9 +100,8 @@ public final class PBuilderWorker extends ChrootWorker  {
                 log.fatalError("Could not setup chroot environment");
                 return null;
             }
-            
             FilePath script;
-            
+
             // add repositories
             if (property != null) {
                 addRepositories(tarBall, node.createLauncher(log), log, property.getRepos());
@@ -116,7 +118,7 @@ public final class PBuilderWorker extends ChrootWorker  {
                     return null;
                 }
             }
-            
+
             // run additional setup command
             if (property != null && !property.getSetupCommand().isEmpty()) {
                 String shebang = "#!/usr/bin/env bash\n";
@@ -133,9 +135,10 @@ public final class PBuilderWorker extends ChrootWorker  {
                 }
             }
         }
+        ChrootUtil.saveDigest(tarBall);
         return tarBall;
     }
-
+    
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException {
         String userName = super.getUserName(launcher);
@@ -154,12 +157,12 @@ public final class PBuilderWorker extends ChrootWorker  {
         String create_user = String.format("useradd %s -u %d -g %d -m | : \n", userName, id, gid);
         String run_script;
         String sudoUser = userName;
-        if (runAsRoot){
+        if (runAsRoot) {
             sudoUser = "root";
         }
-
+        
         run_script = String.format("chmod u+x %s\n ret=1; sudo -i -u %s bash -- %s; if [ $? -eq 0 ]; then ret=0; fi;cd %s; chown %s:%s ./ -R; exit $ret\n", script.getRemote(), sudoUser, script.getRemote(), build.getWorkspace().getRemote(), userName, groupName);
-
+        
         String shebang = "#!/usr/bin/env bash\n";
         String setup_command = shebang + create_group + create_user + run_script;
         FilePath setup_script = build.getWorkspace().createTextTempFile("chroot", ".sh", setup_command);
@@ -168,32 +171,31 @@ public final class PBuilderWorker extends ChrootWorker  {
                 .add("--basetgz").add(tarBall.getRemote())
                 .add("--").add(setup_script);
         int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
-            script.delete();
+        script.delete();
         setup_script.delete();
         return exitCode == 0;
     }
-
+    
     @Override
     public boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException {
-        ArgumentListBuilder b= new ArgumentListBuilder().add("sudo").add(getTool())
+        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
                 .add("--update")
                 .add("--basetgz").add(tarBall.getRemote())
                 .add("--extrapackages")
                 .add(StringUtils.join(packages, " "));
-        if (forceInstall){
+        if (forceInstall) {
             b = b.add("--allow-untrusted");
         }
         return launcher.launch().cmds(b).stderr(listener.getLogger()).join() == 0;
     }
-
     
-    public List<String> getDefaultPackages(){
+    public List<String> getDefaultPackages() {
         return new ImmutableList.Builder<String>()
                 .add("python-software-properties")
                 .add("sudo")
                 .add("wget").build();
     }
-
+    
     @Override
     public boolean addRepositories(FilePath tarBall, Launcher launcher, TaskListener log, List<Repository> repositories) throws IOException, InterruptedException {
         if (repositories.size() > 0) {
@@ -202,7 +204,7 @@ public final class PBuilderWorker extends ChrootWorker  {
                 commands += repo.setUpCommand();
             }
             FilePath script = tarBall.getParent().createTextTempFile("chroot", ".sh", commands);
-
+            
             ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--execute")
                     .add("--save-after-exec")
                     .add("--").add(script);
@@ -215,16 +217,16 @@ public final class PBuilderWorker extends ChrootWorker  {
         }
         return true;
     }
-
+    
     @Override
     public boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
         ArgumentListBuilder a = defaultArgumentList(tarBall, "--clean");
         return launcher.launch().cmds(a).stdout(listener).stderr(listener.getLogger()).join() == 0;
     }
-
+    
     @Override
     public boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
-        ArgumentListBuilder b= new ArgumentListBuilder().add("sudo").add(getTool())
+        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
                 .add("--update")
                 .add("--basetgz").add(tarBall.getRemote());
         return launcher.launch().cmds(b).stderr(listener.getLogger()).join() == 0;

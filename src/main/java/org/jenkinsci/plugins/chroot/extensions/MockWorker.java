@@ -53,17 +53,7 @@ public final class MockWorker extends ChrootWorker {
         FilePath tarBall;
         ChrootToolsetProperty property = tool.getProperties().get(ChrootToolsetProperty.class);
         // take the property into account if it exists
-        if (property != null) {
-            
-            if (property.getTarball().isAbsolute()) {
-                tarBall = new FilePath(property.getTarball());
-            } else {
-                tarBall = rootDir.child(property.getTarball().getPath());
-            }
-            
-        } else {
-            tarBall = rootDir.child(tool.getName() + ".tgz");
-        }
+        tarBall = rootDir.child(tool.getName() + ".tgz");
         FilePath chrootDir = node.getRootPath().createTempDir(tool.getName(), "");
         FilePath cacheDir = chrootDir.child("cache");
         FilePath buildDir = chrootDir.child("build");

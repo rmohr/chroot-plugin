@@ -26,12 +26,13 @@ package org.jenkinsci.plugins.chroot.builders;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.Computer;
 import hudson.model.FreeStyleProject;
+import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
@@ -77,7 +78,7 @@ public class ChrootBuilder extends Builder implements Serializable {
     @DataBoundConstructor
     public ChrootBuilder(String chrootName, boolean ignoreExit,
             String additionalPackages, String packagesFile, boolean clear,
-            String command, boolean loginAsRoot, boolean noUpdate, boolean forceInstall) {
+            String command, boolean loginAsRoot, boolean noUpdate, boolean forceInstall) throws IOException {
         this.loginAsRoot = loginAsRoot;
         this.chrootName = chrootName;
         this.ignoreExit = ignoreExit;
@@ -88,11 +89,8 @@ public class ChrootBuilder extends Builder implements Serializable {
         this.noUpdate = noUpdate;
         this.forceInstall = forceInstall;
         for (String filepath : ChrootUtil.splitFiles(packagesFile)) {
-            try {
-                this.packagesFromFile.addAll(ChrootUtil.splitPackages(FileUtils.readFileToString(
-                        new File(filepath))));
-            } catch (IOException ex) {
-            }
+            this.packagesFromFile.addAll(ChrootUtil.splitPackages(FileUtils.readFileToString(
+                    new File(filepath))));
         }
     }
 
@@ -124,22 +122,38 @@ public class ChrootBuilder extends Builder implements Serializable {
         return clear;
     }
 
+    private static final class LocalCopyTo implements FileCallable<Void> {
+
+        private final String target;
+
+        public LocalCopyTo(String target) {
+            this.target = target;
+        }
+
+        public Void invoke(File source, VirtualChannel channel) throws IOException, InterruptedException {
+            FilePath _source = new FilePath(source);
+            FilePath _target = new FilePath(new File(target));
+            _source.copyTo(_target);
+            return null;
+        }
+    }
+
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
         ChrootToolset installation = ChrootToolset.getInstallationByName(this.chrootName);
-        installation = installation.forNode(Computer.currentComputer().getNode(), listener);
+        installation = installation.forNode(build.getBuiltOn(), listener);
         installation = installation.forEnvironment(env);
         if (installation.getHome() == null) {
             listener.fatalError("Installation of chroot environment failed");
             return false;
         }
-        FilePath tarBall = new FilePath(Computer.currentComputer().getChannel(), installation.getHome());
+        FilePath tarBall = new FilePath(build.getBuiltOn().getChannel(), installation.getHome());
         FilePath workerTarBall = build.getWorkspace().child(this.chrootName).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
 
         // force environment recreation when clear is selected
-        if (this.clear) {
+        if (isClear()) {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Chroot environment cleanup failed");
@@ -147,20 +161,18 @@ public class ChrootBuilder extends Builder implements Serializable {
             }
         }
 
-        if (!workerTarBall.exists() || tarBall.lastModified() > workerTarBall.lastModified()) {
-            tarBall.copyTo(workerTarBall);
+        if (!workerTarBall.exists() || !ChrootUtil.isFileIntact(workerTarBall) || tarBall.lastModified() > workerTarBall.lastModified()) {
+            tarBall.act(new LocalCopyTo(workerTarBall.getRemote()));
+            ChrootUtil.getDigestFile(tarBall).act(new LocalCopyTo(ChrootUtil.getDigestFile(workerTarBall).getRemote()));
         }
 
         //install extra packages
         List<String> packages = new LinkedList<String>(this.additionalPackages);
         for (String packagesFile : ChrootUtil.splitFiles(getPackagesFile())) {
-            try {
-                FilePath packageFile = new FilePath(build.getWorkspace(), packagesFile);
-                if (packageFile.exists() && !packageFile.isDirectory()) {
-                    String packageFilePackages = packageFile.readToString();
-                    packages.addAll(ChrootUtil.splitPackages(packageFilePackages));
-                }
-            } catch (IOException ex) {
+            FilePath packageFile = new FilePath(build.getWorkspace(), packagesFile);
+            if (packageFile.exists() && !packageFile.isDirectory()) {
+                String packageFilePackages = packageFile.readToString();
+                packages.addAll(ChrootUtil.splitPackages(packageFilePackages));
             }
         }
 
@@ -207,21 +219,19 @@ public class ChrootBuilder extends Builder implements Serializable {
             Boolean warn = false;
             Boolean error = false;
             for (String file : ChrootUtil.splitFiles(value)) {
-                if (file.length() != 0) {
-                    FilePath x = new FilePath(new File(file));
-                    if (!x.exists()) {
-                        warn = true;
-                        validationList.add(String.format("File %s does not yet exist.", file));
-                    } else if (x.isDirectory()) {
-                        error = true;
-                        validationList.add(String.format("%s is a directory. Enter a file.", file));
-                    }
+                FilePath x = new FilePath(new File(file));
+                if (!x.exists()) {
+                    warn = true;
+                    validationList.add(String.format("File %s does not yet exist.", file));
+                } else if (x.isDirectory()) {
+                    error = true;
+                    validationList.add(String.format("%s is a directory. Enter a file.", file));
                 }
             }
             if (error == true) {
-                        return FormValidation.error(StringUtils.join(validationList.listIterator(), "\n"));                 
-            }else if (warn == true){
-                        return FormValidation.warning(StringUtils.join(validationList.listIterator(), "\n"));                
+                return FormValidation.error(StringUtils.join(validationList.listIterator(), "\n"));
+            } else if (warn == true) {
+                return FormValidation.warning(StringUtils.join(validationList.listIterator(), "\n"));
             }
             return FormValidation.ok();
         }
