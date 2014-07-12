@@ -46,7 +46,7 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
 
     private List<String> packages;
     private String setupCommand;
-    private File tarball;
+    private File tarball; //deprecated
     private List<Repository> repositories;
     private String setupArguments;
 
@@ -57,10 +57,10 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
     @DataBoundConstructor
     public ChrootToolsetProperty(String setupCommand, String packages, String tarball, String setupArguments, List<Repository> repos) {
         super();
+        this.tarball = null;
         this.packages = ChrootUtil.splitPackages(packages);
         this.setupArguments = setupArguments;
         this.setupCommand = setupCommand;
-        this.tarball = new File(tarball);
         if (repos == null){
             repos = new ArrayList<Repository>();
         }
@@ -104,7 +104,6 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
               other.repositories.toArray(new Repository[other.packages.size()])
               )
               .append(this.setupCommand, other.setupCommand)
-              .append(this.tarball, other.tarball)
               .append(this.setupArguments, other.setupArguments)
               .isEquals();
     }
@@ -114,7 +113,6 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
         return new HashCodeBuilder()
                 .append(this.packages)
                 .append(this.setupCommand)
-                .append(this.tarball)
                 .append(this.packages.toArray(new String[this.packages.size()]))
                 .append(this.repositories.toArray(new Repository[this.packages.size()]))
                 .append(this.setupArguments)
@@ -124,10 +122,6 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
     public String getSetupCommand() {
         return setupCommand;
     }
-
-    public File getTarball() {
-        return tarball;
-    } 
 
     @Extension
     public static final class ChrootToolsetPropertyDescriptor extends ToolPropertyDescriptor {
