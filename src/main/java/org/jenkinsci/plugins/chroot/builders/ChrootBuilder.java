@@ -189,6 +189,7 @@ public class ChrootBuilder extends Builder implements Serializable {
                 return ret || ignoreExit;
             }
         }
+        ChrootUtil.saveDigest(workerTarBall);
         return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.command, isLoginAsRoot());
     }
 
