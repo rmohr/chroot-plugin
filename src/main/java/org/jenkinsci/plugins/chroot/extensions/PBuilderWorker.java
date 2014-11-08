@@ -191,7 +191,7 @@ public final class PBuilderWorker extends ChrootWorker {
     
     public List<String> getDefaultPackages() {
         return new ImmutableList.Builder<String>()
-                .add("python-software-properties")
+                .add("software-properties-common")
                 .add("sudo")
                 .add("wget").build();
     }
