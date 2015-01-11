@@ -23,6 +23,7 @@
  */
 package org.jenkinsci.plugins.chroot.tools;
 
+import com.google.common.base.Strings;
 import hudson.CopyOnWrite;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -55,9 +56,10 @@ import org.kohsuke.stapler.QueryParameter;
  */
 public final class ChrootToolset extends ToolInstallation implements EnvironmentSpecific<ChrootToolset>,
         NodeSpecific<ChrootToolset> {
+
     private String toolName;
     private long lastModified;
-    
+
     @DataBoundConstructor
     public ChrootToolset(String name, String home, String toolName, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
@@ -76,8 +78,8 @@ public final class ChrootToolset extends ToolInstallation implements Environment
     public void setLastModified(long lastModified) {
         this.lastModified = lastModified;
     }
-    
-    public ChrootWorker getChrootWorker(){
+
+    public ChrootWorker getChrootWorker() {
         return ChrootWorker.getByName(this.getToolName());
     }
 
@@ -86,11 +88,17 @@ public final class ChrootToolset extends ToolInstallation implements Environment
     }
 
     public ChrootToolset forNode(Node node, TaskListener listener) throws IOException, InterruptedException {
+        String home = translateFor(node, listener);
+        if (Strings.isNullOrEmpty(home)) {
+            throw new IOException("The node " + node.getDisplayName() + " is not correctly setup up for " + this.getToolName());
+        }
         return new ChrootToolset(getName(), translateFor(node, listener), getToolName(), getProperties().toList());
     }
-    
+
     public static ChrootToolset getInstallationByName(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         for (ChrootToolset installation : list()) {
             if (name.equals(installation.getName())) {
                 return installation;
@@ -101,24 +109,22 @@ public final class ChrootToolset extends ToolInstallation implements Environment
 
     @Override
     public boolean equals(Object obj) {
-      if (obj instanceof ChrootToolset == false)  
-      {  
-        return false;  
-      }  
-      if (this == obj)  
-      {  
-         return true;  
-      } 
-      final ChrootToolset other = (ChrootToolset)obj;
-      ChrootToolsetProperty p_this = this.getProperties().get(ChrootToolsetProperty.class);
-      ChrootToolsetProperty p_other = other.getProperties().get(ChrootToolsetProperty.class);
+        if (obj instanceof ChrootToolset == false) {
+            return false;
+        }
+        if (this == obj) {
+            return true;
+        }
+        final ChrootToolset other = (ChrootToolset) obj;
+        ChrootToolsetProperty p_this = this.getProperties().get(ChrootToolsetProperty.class);
+        ChrootToolsetProperty p_other = other.getProperties().get(ChrootToolsetProperty.class);
 
-      return new EqualsBuilder()
-              .append(this.getName(), other.getName())
-              .append(this.getHome(), other.getHome())
-              .append(this.getToolName(), other.getToolName())
-              .append(p_this, p_other)
-              .isEquals();
+        return new EqualsBuilder()
+                .append(this.getName(), other.getName())
+                .append(this.getHome(), other.getHome())
+                .append(this.getToolName(), other.getToolName())
+                .append(p_this, p_other)
+                .isEquals();
     }
 
     @Override
@@ -131,14 +137,12 @@ public final class ChrootToolset extends ToolInstallation implements Environment
                 .append(p_this)
                 .toHashCode();
     }
-    
-    public static boolean isEmpty()
-    {
+
+    public static boolean isEmpty() {
         return list().length == 0;
     }
 
-    public static ChrootToolset[] list()
-    {
+    public static ChrootToolset[] list() {
         return ToolInstallation.all().get(DescriptorImpl.class).getInstallations();
     }
 
@@ -146,21 +150,21 @@ public final class ChrootToolset extends ToolInstallation implements Environment
     public static final class DescriptorImpl extends ToolDescriptor<ChrootToolset> {
 
         @CopyOnWrite
-         private volatile ChrootToolset[] installations;
-        
+        private volatile ChrootToolset[] installations;
+
         public ListBoxModel doFillToolNameItems() {
             ListBoxModel items = new ListBoxModel();
-            for(ChrootWorker w : ChrootWorker.all()){
-            items.add(w.getName());
+            for (ChrootWorker w : ChrootWorker.all()) {
+                items.add(w.getName());
             }
             return items;
         }
-        
+
         public DescriptorImpl() {
             this.installations = new ChrootToolset[0];
             load();
         }
-        
+
         @Override
         public String getDisplayName() {
             return "Chroot Environment";
@@ -168,15 +172,15 @@ public final class ChrootToolset extends ToolInstallation implements Environment
 
         @Override
         public void setInstallations(ChrootToolset... installations) {
-            
+
             List<ChrootToolset> old_installations = Arrays.asList(this.installations);
-            for (ChrootToolset tool: installations){
+            for (ChrootToolset tool : installations) {
                 int index = old_installations.indexOf(tool);
-                if (index != -1){
-                 tool.setLastModified(old_installations.get(index).getLastModified());
+                if (index != -1) {
+                    tool.setLastModified(old_installations.get(index).getLastModified());
                 }
             }
-            
+
             this.installations = installations;
             save();
         }
@@ -185,12 +189,12 @@ public final class ChrootToolset extends ToolInstallation implements Environment
         public ChrootToolset[] getInstallations() {
             return this.installations;
         }
-        
+
         @Override
         public List<? extends ToolInstaller> getDefaultInstallers() {
             return Collections.singletonList(new ChrootCreator(null));
-        }  
-        
+        }
+
         public FormValidation doCheckName(@QueryParameter String value)
                 throws IOException, ServletException {
             if (value.length() == 0) {
@@ -205,13 +209,11 @@ public final class ChrootToolset extends ToolInstallation implements Environment
                 FilePath x = new FilePath(new File(value));
                 if (!x.exists()) {
                     return FormValidation.error("Directory does not exist.");
-                } else if (!x.isDirectory()){
+                } else if (!x.isDirectory()) {
                     return FormValidation.error("This is a file. Enter a directory.");
                 }
             }
             return FormValidation.ok();
         }
     }
-    
-    
 }
