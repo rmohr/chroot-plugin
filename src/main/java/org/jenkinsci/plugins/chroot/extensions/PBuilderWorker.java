@@ -256,10 +256,12 @@ public final class PBuilderWorker extends ChrootWorker {
     @Override
     public boolean healthCheck(Launcher launcher) {
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
-                .add("--clean");
+                .add("--help");
         try {
-            if (launcher.launch().cmds(b).stderr(stderr).join() == 0) {
+            launcher.launch().cmds(b).stderr(stderr).stdout(stdout).join();
+            if (stdout.toString().contains("--basetgz")) {
                 return true;
             }
         } catch (IOException ex) {
