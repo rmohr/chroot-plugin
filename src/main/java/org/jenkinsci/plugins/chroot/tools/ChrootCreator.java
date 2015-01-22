@@ -85,18 +85,12 @@ public class ChrootCreator extends ToolInstaller {
 
         // check if the required tools are installed
         ChrootToolset toolset = ChrootToolset.getInstallationByName(tool.getName());
-        FilePath tool = new FilePath(node.getChannel(), toolset.getChrootWorker().getTool());
-        try {
-            if (!tool.exists()) {
-                return false;
-            }
-        } catch (IOException ex) {
-            return false;
-        } catch (InterruptedException ex) {
+        ChrootWorker worker = toolset.getChrootWorker();
+
+        // check if jenkins can run the chroot
+        if (!worker.healthCheck(launcher)) {
             return false;
         }
-
-        //TODO: check for correct permissions
         return true;
     }
 }

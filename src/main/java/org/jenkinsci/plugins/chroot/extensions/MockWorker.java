@@ -58,24 +58,24 @@ public final class MockWorker extends ChrootWorker {
         FilePath cacheDir = chrootDir.child("cache");
         FilePath buildDir = chrootDir.child("build");
         FilePath resultDir = chrootDir.child("result");
-        
+
         if (!tarBall.exists()) {
             // copy /etc/mock/default.cfg to this location
             FilePath system_default_cfg = node.createPath("/etc/mock/default.cfg");
             FilePath system_logging_cfg = node.createPath("/etc/mock/logging.ini");
             FilePath default_cfg = new FilePath(chrootDir, tool.getName() + ".cfg");
-            FilePath logging_cfg = new FilePath(chrootDir, "logging.ini");            
-            FilePath site_default_cfg = new FilePath(chrootDir,"site-defaults.cfg");
-            
+            FilePath logging_cfg = new FilePath(chrootDir, "logging.ini");
+            FilePath site_default_cfg = new FilePath(chrootDir, "site-defaults.cfg");
+
             system_default_cfg.copyTo(default_cfg);
             system_logging_cfg.copyTo(logging_cfg);
-            
+
             String cfg_content = String.format(
                     "config_opts['basedir'] = '%s'\n"
-                    + "config_opts['cache_topdir'] = '%s'\n", 
+                    + "config_opts['cache_topdir'] = '%s'\n",
                     buildDir.getRemote(),
                     cacheDir.getRemote());
-            
+
             site_default_cfg.write(cfg_content, null);
             ArgumentListBuilder cmd = new ArgumentListBuilder();
             cmd.add(getTool())
@@ -88,7 +88,6 @@ public final class MockWorker extends ChrootWorker {
         }
         return tarBall;
     }
-
 
     @Override
     public String getName() {
@@ -106,7 +105,7 @@ public final class MockWorker extends ChrootWorker {
         int id = super.getUID(launcher, userName);
         commands = "cd " + build.getWorkspace().getRemote() + "\n" + commands;
         FilePath script = build.getWorkspace().createTextTempFile("chroot", ".sh", commands);
-  
+
 //            String cfg_content = String.format(
 //                    "config_opts['basedir'] = '%s'\n"
 //                    + "config_opts['cache_topdir'] = '%s'\n"
@@ -116,11 +115,11 @@ public final class MockWorker extends ChrootWorker {
 //                    rootDir.getRemote(),
 //                    node.getRootPath().absolutize().getRemote(),
 //                    node.getRootPath().absolutize().getRemote(),
-//                    default_cfg.readToString());        
-        
-        
+//                    default_cfg.readToString());
+
+
         ArgumentListBuilder b = new ArgumentListBuilder().add(getTool()).add(script);
-        
+
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
         return exitCode == 0;
@@ -130,7 +129,7 @@ public final class MockWorker extends ChrootWorker {
     public boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-    
+
     public List<String> getDefaultPackages() {
         return new ImmutableList.Builder<String>().build();
     }
@@ -150,4 +149,8 @@ public final class MockWorker extends ChrootWorker {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
+    @Override
+    public boolean healthCheck(Launcher launcher) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

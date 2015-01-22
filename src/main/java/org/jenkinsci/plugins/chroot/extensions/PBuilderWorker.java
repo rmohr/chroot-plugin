@@ -35,9 +35,12 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
@@ -50,6 +53,8 @@ import org.jenkinsci.plugins.chroot.util.ChrootUtil;
  */
 @Extension
 public final class PBuilderWorker extends ChrootWorker {
+
+    private static final Logger logger = Logger.getLogger("jenkins.plugins.chroot.extensions.PBuilderWorker");
 
     @Override
     public String getName() {
@@ -230,5 +235,23 @@ public final class PBuilderWorker extends ChrootWorker {
                 .add("--update")
                 .add("--basetgz").add(tarBall.getRemote());
         return launcher.launch().cmds(b).stderr(listener.getLogger()).join() == 0;
+    }
+
+    @Override
+    public boolean healthCheck(Launcher launcher) {
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
+                .add("--clean");
+        try {
+            if (launcher.launch().cmds(b).stderr(stderr).join() == 0) {
+                return true;
+            }
+        } catch (IOException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        }
+        logger.log(Level.SEVERE, stderr.toString());
+        return false;
     }
 }

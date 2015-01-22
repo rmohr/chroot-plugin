@@ -44,29 +44,31 @@ import org.jenkinsci.plugins.chroot.tools.Repository;
  * @author roman
  */
 public abstract class ChrootWorker implements ExtensionPoint {
-        
+
     public abstract String getName();
-    
+
     public abstract String getTool();
-    
+
+    public abstract boolean healthCheck(Launcher launcher);
+
     public abstract List<String> getDefaultPackages();
-        
+
     public abstract boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException;
-    
+
     public abstract FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException;
-    
+
     public abstract boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException;
 
-    public abstract boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException; 
-    
+    public abstract boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException;
+
     public abstract boolean addRepositories(FilePath tarBall, Launcher launcher, TaskListener log, List<Repository> Repositories) throws IOException, InterruptedException;
 
-    public abstract boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException;      
-    
+    public abstract boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException;
+
     public static ExtensionList<ChrootWorker> all() {
         return Jenkins.getInstance().getExtensionList(ChrootWorker.class);
     }
-    
+
     public static ChrootWorker getByName(String name) {
         for (ChrootWorker w : ChrootWorker.all()) {
             if (w.getName().equals(name)) {
@@ -77,38 +79,37 @@ public abstract class ChrootWorker implements ExtensionPoint {
         assert false;
         return null;
     }
-    
-    protected String getUserName(Launcher launcher) throws IOException, InterruptedException{
+
+    protected String getUserName(Launcher launcher) throws IOException, InterruptedException {
         ArgumentListBuilder builder = new ArgumentListBuilder();
         builder.add("whoami");
         return run(launcher, builder);
     }
-    
-    protected int getUID(Launcher launcher, String userName) throws IOException, InterruptedException{
+
+    protected int getUID(Launcher launcher, String userName) throws IOException, InterruptedException {
         ArgumentListBuilder builder = new ArgumentListBuilder();
         builder.add("id").add("-u").add(userName);
         Integer id = new Integer(run(launcher, builder));
         return id;
     }
-    
-    protected int getGID(Launcher launcher, String userName) throws IOException, InterruptedException{
+
+    protected int getGID(Launcher launcher, String userName) throws IOException, InterruptedException {
         ArgumentListBuilder builder = new ArgumentListBuilder();
         builder.add("id").add("-g").add(userName);
         Integer id = new Integer(run(launcher, builder));
         return id;
     }
-    
-    protected String getGroupName(Launcher launcher, String userName) throws IOException, InterruptedException{
+
+    protected String getGroupName(Launcher launcher, String userName) throws IOException, InterruptedException {
         ArgumentListBuilder builder = new ArgumentListBuilder();
         builder.add("id").add("-n").add("-g").add(userName);
         String name = run(launcher, builder);
         return name;
     }
-    
-    private String run(Launcher launcher, ArgumentListBuilder builder) throws IOException, InterruptedException{
+
+    protected String run(Launcher launcher, ArgumentListBuilder builder) throws IOException, InterruptedException {
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         launcher.launch().cmds(builder).stdout(stdout).join();
         return stdout.toString().trim();
     }
-    
 }
