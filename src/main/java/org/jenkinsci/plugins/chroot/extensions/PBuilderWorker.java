@@ -72,6 +72,23 @@ public final class PBuilderWorker extends ChrootWorker {
                 .add("--basetgz").add(tarBall.getRemote());
     }
 
+    private boolean doSetUp(FilePath tarBall, List<String> packages, ChrootToolsetProperty property, ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
+
+        // build setup command
+        ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--create");
+
+        // don't forget to install additional packages
+        if (!getDefaultPackages().isEmpty()) {
+            cmd.add("--extrapackages").add(StringUtils.join(packages, " "));
+        }
+
+        if (property != null && !Strings.isNullOrEmpty(property.getSetupArguments())) {
+            cmd.add(property.getSetupArguments().split("\\s+"));
+        }
+        //make pbuilder less verbose by ignoring stdout
+        return node.createLauncher(log).launch().cmds(cmd).stderr(log.getLogger()).join() == 0;
+    }
+
     @Override
     public FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
         FilePath rootDir = node.getRootPath();
@@ -80,30 +97,21 @@ public final class PBuilderWorker extends ChrootWorker {
         ChrootToolset toolset = ChrootToolset.getInstallationByName(tool.getName());
         ChrootToolsetProperty property = tool.getProperties().get(ChrootToolsetProperty.class);
         tarBall = rootDir.child(getName()).child(tool.getName() + ".tgz");
-        // build setup command
-        ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--create");
-
-        // don't forget to install additional packages
-        if (!getDefaultPackages().isEmpty()) {
-            cmd.add("--extrapackages").add(StringUtils.join(getDefaultPackages(), " "));
-        }
-
-        if (property != null && !Strings.isNullOrEmpty(property.getSetupArguments())) {
-            cmd.add(property.getSetupArguments().split("\\s+"));
-        }
 
         // run setup
         if (!tarBall.exists() || !ChrootUtil.isFileIntact(tarBall) || tarBall.lastModified() <= toolset.getLastModified()) {
+
             ChrootUtil.getDigestFile(tarBall).delete();
             tarBall.delete();
 
             tarBall.getParent().mkdirs();
             int ret;
-            //make pbuilder less verbose by ignoring stdout
-            ret = node.createLauncher(log).launch().cmds(cmd).stderr(log.getLogger()).join();
-            if (ret != 0) {
-                log.fatalError("Could not setup chroot environment");
-                return null;
+
+            if (!doSetUp(tarBall, getDefaultPackages(), property, tool, node, log)) {
+                if (!doSetUp(tarBall, getFallbackPackages(), property, tool, node, log)) {
+                    log.fatalError("Could not setup chroot environment");
+                    return null;
+                }
             }
             FilePath script;
 
@@ -114,7 +122,7 @@ public final class PBuilderWorker extends ChrootWorker {
 
             // add additional packages
             if (property != null && !property.getPackagesList().isEmpty()) {
-                cmd = defaultArgumentList(tarBall, "--update")
+                ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--update")
                         .add("--extrapackages")
                         .add(StringUtils.join(property.getPackagesList(), " "));
                 ret = node.createLauncher(log).launch().cmds(cmd).stderr(log.getLogger()).join();
@@ -129,7 +137,7 @@ public final class PBuilderWorker extends ChrootWorker {
                 String shebang = "#!/usr/bin/env bash\n";
                 String command = shebang + "set -e\nset -x verbose\n" + property.getSetupCommand();
                 script = rootDir.createTextTempFile("chroot", ".sh", command);
-                cmd = defaultArgumentList(tarBall, "--execute")
+                ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--execute")
                         .add("--save-after-exec")
                         .add("--").add(script);
                 ret = node.createLauncher(log).launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
@@ -195,6 +203,14 @@ public final class PBuilderWorker extends ChrootWorker {
     }
 
     public List<String> getDefaultPackages() {
+        return new ImmutableList.Builder<String>()
+                .add("software-properties-common")
+                .add("sudo")
+                .add("wget").build();
+    }
+
+    // really ugly quickfix for https://github.com/rmohr/chroot-plugin/pull/2
+    public List<String> getFallbackPackages() {
         return new ImmutableList.Builder<String>()
                 .add("python-software-properties")
                 .add("sudo")

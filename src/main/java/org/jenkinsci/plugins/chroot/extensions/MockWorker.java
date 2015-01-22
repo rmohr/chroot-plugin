@@ -153,4 +153,9 @@ public final class MockWorker extends ChrootWorker {
     public boolean healthCheck(Launcher launcher) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
+    @Override
+    public List<String> getFallbackPackages() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

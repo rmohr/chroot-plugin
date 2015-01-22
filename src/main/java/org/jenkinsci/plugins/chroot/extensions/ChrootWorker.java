@@ -53,6 +53,8 @@ public abstract class ChrootWorker implements ExtensionPoint {
 
     public abstract List<String> getDefaultPackages();
 
+    public abstract List<String> getFallbackPackages();
+
     public abstract boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException;
 
     public abstract FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException;
