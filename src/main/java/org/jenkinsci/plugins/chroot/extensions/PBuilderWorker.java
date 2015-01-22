@@ -35,6 +35,7 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
+import hudson.util.QuotedStringTokenizer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -83,7 +84,7 @@ public final class PBuilderWorker extends ChrootWorker {
         }
 
         if (property != null && !Strings.isNullOrEmpty(property.getSetupArguments())) {
-            cmd.add(property.getSetupArguments().split("\\s+"));
+            cmd.add(QuotedStringTokenizer.tokenize(property.getSetupArguments()));
         }
         //make pbuilder less verbose by ignoring stdout
         return node.createLauncher(log).launch().cmds(cmd).stderr(log.getLogger()).join() == 0;
