@@ -46,15 +46,19 @@ public class ChrootCreator extends ToolInstaller {
     public ChrootCreator(String label) {
         super(label);
     }
-    
+
     @Override
     public FilePath performInstallation(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
         ChrootToolset toolset = ChrootToolset.getInstallationByName(tool.getName());
-        return ChrootWorker.getByName(toolset.getToolName()).setUp(tool, node, log);
+        FilePath path = ChrootWorker.getByName(toolset.getToolName()).setUp(tool, node, log);
+        if (path == null) {
+            throw new IOException("Installation of tool " + tool.getName() + " on node " + node.getDisplayName() + " failed.");
+        }
+        return path;
     }
 
     @Extension
-    public static class DescriptorImpl extends ToolInstallerDescriptor<ChrootCreator>{
+    public static class DescriptorImpl extends ToolInstallerDescriptor<ChrootCreator> {
 
         @Override
         public String getDisplayName() {
@@ -70,7 +74,7 @@ public class ChrootCreator extends ToolInstaller {
     @Override
     public boolean appliesTo(Node node) {
         // check if the label applies
-        if ( ! super.appliesTo(node)){
+        if (!super.appliesTo(node)) {
             return false;
         }
         // check if we are on unix
@@ -78,26 +82,15 @@ public class ChrootCreator extends ToolInstaller {
         if (!launcher.isUnix()) {
             return false;
         }
-        
+
         // check if the required tools are installed
         ChrootToolset toolset = ChrootToolset.getInstallationByName(tool.getName());
-        FilePath tool = new FilePath(node.getChannel(), toolset.getChrootWorker().getTool());
-        try {
-            if (!tool.exists()) {
-                return false;
-            }
-        } catch (IOException ex) {
-            return false;
-        } catch (InterruptedException ex) {
+        ChrootWorker worker = toolset.getChrootWorker();
+
+        // check if jenkins can run the chroot
+        if (!worker.healthCheck(launcher)) {
             return false;
         }
-        
-        //TODO: check for correct permissions
         return true;
     }
-    
-    
-    
-
-    
 }

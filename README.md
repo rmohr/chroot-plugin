@@ -10,8 +10,15 @@ attractive as a build server for C and C++ projects.
 
 Pbuilder works quite nice already. Mock is not useable at the moment.
 
+Installation from Jenkins
+-------------------------
+
+Just install it like any other plugin: Chroot-plugin is available in the Jenkins Update Center.
+An extensive plugin documentation can be found in the [Jenkins Wiki](https://wiki.jenkins-ci.org/display/JENKINS/chroot+Plugin).
+
+
 Installation from source
-========================
+------------------------
 
 ```bash
 git clone https://github.com/rmohr/chroot-plugin
@@ -24,7 +31,7 @@ You will find the resulting hpi file here:
 ```
 
 Using pbuilder
-==============
+--------------
 
 To allow jenkins to use pbuilder it is necessary to that the jenkins user can
 run /usr/sbin/pbuilder via sudo. Make sure to protect your jenkins installation
@@ -38,7 +45,7 @@ jenkins ALL=(ALL) NOPASSWD: /usr/sbin/pbuilder
 ```
 
 Using the plugin
-================
+----------------
 
 First Create chroot environments in _Manage Jenkins_ > _Chroot Environments_:
 ![chroot configuration](minimal_configuration.png)
@@ -49,6 +56,6 @@ A buildstep _chroot builder_ is now available where you can select a preconfigur
 ![buildstep configuration](buildstep.png)
 
 Future Plans
-============
+------------
 As the prove of concept phase is over, the next step is to clean the code and
 create a clean interface for long term stability.
