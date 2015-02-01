@@ -12,7 +12,7 @@
 
   <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>chroot</artifactId>
-  <version>0.1.4</version>
+  <version>0.2-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Chroot Plugin</name>
@@ -23,7 +23,7 @@
     <connection>scm:git:ssh://github.com/jenkinsci/chroot-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/chroot-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/chroot-plugin</url>
-    <tag>chroot-0.1.4</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <developers>
