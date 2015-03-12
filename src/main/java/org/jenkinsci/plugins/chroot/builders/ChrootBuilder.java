@@ -223,8 +223,13 @@ public class ChrootBuilder extends Builder implements Serializable {
             List<String> validationList = new LinkedList<String>();
             Boolean warn = false;
             Boolean error = false;
+            FilePath workspace = project.getSomeWorkspace();
             for (String file : ChrootUtil.splitFiles(value)) {
-                FilePath x = new FilePath(project.getSomeWorkspace(), file);
+                if (workspace == null) {
+                    // return here => exactly one warning, iff field has a value
+                    return FormValidation.warning("Workspace does not yet exist.");
+                }
+                FilePath x = new FilePath(workspace, file);
                 if (!x.exists()) {
                     warn = true;
                     validationList.add(String.format("File %s does not yet exist.", file));
