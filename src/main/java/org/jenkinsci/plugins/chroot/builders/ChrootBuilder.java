@@ -49,6 +49,7 @@ import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.util.ChrootUtil;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.AncestorInPath;
 
 /**
  *
@@ -217,13 +218,13 @@ public class ChrootBuilder extends Builder implements Serializable {
             return "Chroot Builder";
         }
 
-        public FormValidation doCheckPackagesFile(@QueryParameter String value)
+        public FormValidation doCheckPackagesFile(@AncestorInPath AbstractProject project, @QueryParameter String value)
                 throws IOException, ServletException, InterruptedException {
             List<String> validationList = new LinkedList<String>();
             Boolean warn = false;
             Boolean error = false;
             for (String file : ChrootUtil.splitFiles(value)) {
-                FilePath x = new FilePath(new File(file));
+                FilePath x = new FilePath(project.getSomeWorkspace(), file);
                 if (!x.exists()) {
                     warn = true;
                     validationList.add(String.format("File %s does not yet exist.", file));
