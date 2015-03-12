@@ -60,7 +60,6 @@ public class ChrootBuilder extends Builder implements Serializable {
     private boolean ignoreExit;
     private List<String> additionalPackages;
     private String packagesFile;
-    private List<String> packagesFromFile;
     private boolean clear;
     private String command;
     private boolean loginAsRoot;
@@ -88,10 +87,6 @@ public class ChrootBuilder extends Builder implements Serializable {
         this.command = command;
         this.noUpdate = noUpdate;
         this.forceInstall = forceInstall;
-        for (String filepath : ChrootUtil.splitFiles(packagesFile)) {
-            this.packagesFromFile.addAll(ChrootUtil.splitPackages(FileUtils.readFileToString(
-                    new File(filepath))));
-        }
     }
 
     public boolean isLoginAsRoot() {
@@ -176,6 +171,9 @@ public class ChrootBuilder extends Builder implements Serializable {
             if (packageFile.exists() && !packageFile.isDirectory()) {
                 String packageFilePackages = packageFile.readToString();
                 packages.addAll(ChrootUtil.splitPackages(packageFilePackages));
+            } else {
+                listener.error("Requirements file '" + packagesFile + "' is not an existing file.");
+                return false || ignoreExit;
             }
         }
 
