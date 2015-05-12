@@ -67,27 +67,45 @@ public final class PBuilderWorker extends ChrootWorker {
         return "/usr/sbin/pbuilder";
     }
 
-    private ArgumentListBuilder defaultArgumentList(FilePath tarBall, String action) {
-        return new ArgumentListBuilder().add("sudo").add(getTool())
-                .add(action)
-                .add("--basetgz").add(tarBall.getRemote());
+    /* Build a suitable command line for starting the tool */
+    private ArgumentListBuilder makeCommand(FilePath tarBall, String action, ArgumentListBuilder extraArgs) {
+        ArgumentListBuilder cmd = new ArgumentListBuilder()
+                .add("sudo").add(getTool())
+                .add(action);
+        if (tarBall != null) {
+            cmd.add("--basetgz").add(tarBall.getRemote());
+        }
+        if (extraArgs != null) {
+            cmd.add(extraArgs);
+        }
+        return cmd;
     }
 
-    private boolean doSetUp(FilePath tarBall, List<String> packages, ChrootToolsetProperty property, ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
+    /* Launch pbuilder with specified action, logging only stderr output on build console log */
+    private boolean doLaunch_LogStderr(Launcher launcher, TaskListener log, FilePath tarBall, String action, ArgumentListBuilder extraArgs) throws IOException, InterruptedException {
+        return launcher.launch().cmds(makeCommand(tarBall, action, extraArgs)).stderr(log.getLogger()).join() == 0;
+    }
 
-        // build setup command
-        ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--create");
+    /* Launch pbuilder with specified action, logging both stdout and stderr output on build console log */
+    private boolean doLaunch_LogStdout(Launcher launcher, TaskListener log, FilePath tarBall, String action, ArgumentListBuilder extraArgs) throws IOException, InterruptedException {
+        // .stdout with a TaskListener collects both stdout and stderr
+        return launcher.launch().cmds(makeCommand(tarBall, action, extraArgs)).stdout(log).join() == 0;
+    }
+
+    private boolean doSetUp(FilePath tarBall, List<String> packages, ChrootToolsetProperty property, Launcher launcher, TaskListener log) throws IOException, InterruptedException {
+        // setup "extra" arguments
+        ArgumentListBuilder args = new ArgumentListBuilder();
 
         // don't forget to install additional packages
         if (!getDefaultPackages().isEmpty()) {
-            cmd.add("--extrapackages").add(StringUtils.join(packages, " "));
+            args.add("--extrapackages").add(StringUtils.join(packages, " "));
         }
 
         if (property != null && !Strings.isNullOrEmpty(property.getSetupArguments())) {
-            cmd.add(QuotedStringTokenizer.tokenize(property.getSetupArguments()));
+            args.add(QuotedStringTokenizer.tokenize(property.getSetupArguments()));
         }
         //make pbuilder less verbose by ignoring stdout
-        return node.createLauncher(log).launch().cmds(cmd).stderr(log.getLogger()).join() == 0;
+        return doLaunch_LogStderr(launcher, log, tarBall, "--create", args);
     }
 
     @Override
@@ -106,10 +124,9 @@ public final class PBuilderWorker extends ChrootWorker {
             tarBall.delete();
 
             tarBall.getParent().mkdirs();
-            int ret;
 
-            if (!doSetUp(tarBall, getDefaultPackages(), property, tool, node, log)) {
-                if (!doSetUp(tarBall, getFallbackPackages(), property, tool, node, log)) {
+            if (!doSetUp(tarBall, getDefaultPackages(), property, node.createLauncher(log), log)) {
+                if (!doSetUp(tarBall, getFallbackPackages(), property, node.createLauncher(log), log)) {
                     log.fatalError("Could not setup chroot environment");
                     return null;
                 }
@@ -123,11 +140,10 @@ public final class PBuilderWorker extends ChrootWorker {
 
             // add additional packages
             if (property != null && !property.getPackagesList().isEmpty()) {
-                ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--update")
+                ArgumentListBuilder extraPkg = new ArgumentListBuilder()
                         .add("--extrapackages")
                         .add(StringUtils.join(property.getPackagesList(), " "));
-                ret = node.createLauncher(log).launch().cmds(cmd).stderr(log.getLogger()).join();
-                if (ret != 0) {
+                if (!doLaunch_LogStderr(node.createLauncher(log), log, tarBall, "--update", extraPkg)) {
                     log.fatalError("Could not install additional packages.");
                     return null;
                 }
@@ -138,12 +154,12 @@ public final class PBuilderWorker extends ChrootWorker {
                 String shebang = "#!/usr/bin/env bash\n";
                 String command = shebang + "set -e\nset -x verbose\n" + property.getSetupCommand();
                 script = rootDir.createTextTempFile("chroot", ".sh", command);
-                ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--execute")
+                ArgumentListBuilder args = new ArgumentListBuilder()
                         .add("--save-after-exec")
                         .add("--").add(script);
-                ret = node.createLauncher(log).launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+                boolean ok = doLaunch_LogStdout(node.createLauncher(log), log, tarBall, "--execute", args);
                 script.delete();
-                if (ret != 0) {
+                if (!ok) {
                     log.fatalError("Post-setup command failed.");
                     return null;
                 }
@@ -180,27 +196,24 @@ public final class PBuilderWorker extends ChrootWorker {
         String shebang = "#!/usr/bin/env bash\n";
         String setup_command = shebang + create_group + create_user + run_script;
         FilePath setup_script = build.getWorkspace().createTextTempFile("chroot", ".sh", setup_command);
-        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--execute")
+        ArgumentListBuilder args = new ArgumentListBuilder()
                 .add("--bindmounts").add(userHome)
-                .add("--basetgz").add(tarBall.getRemote())
                 .add("--").add(setup_script);
-        int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
+        boolean exitOk = doLaunch_LogStdout(launcher, listener, tarBall, "--execute", args);
         script.delete();
         setup_script.delete();
-        return exitCode == 0;
+        return exitOk;
     }
 
     @Override
     public boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException {
-        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
-                .add("--update")
-                .add("--basetgz").add(tarBall.getRemote())
+        ArgumentListBuilder extraPkg = new ArgumentListBuilder()
                 .add("--extrapackages")
                 .add(StringUtils.join(packages, " "));
         if (forceInstall) {
-            b = b.add("--allow-untrusted");
+            extraPkg.add("--allow-untrusted");
         }
-        return launcher.launch().cmds(b).stderr(listener.getLogger()).join() == 0;
+        return doLaunch_LogStderr(launcher, listener, tarBall, "--update", extraPkg);
     }
 
     public List<String> getDefaultPackages() {
@@ -227,12 +240,12 @@ public final class PBuilderWorker extends ChrootWorker {
             }
             FilePath script = tarBall.getParent().createTextTempFile("chroot", ".sh", commands);
 
-            ArgumentListBuilder cmd = defaultArgumentList(tarBall, "--execute")
+            ArgumentListBuilder args = new ArgumentListBuilder()
                     .add("--save-after-exec")
                     .add("--").add(script);
-            int ret = launcher.launch().cmds(cmd).stderr(log.getLogger()).join();
+            boolean ok = doLaunch_LogStderr(launcher, log, tarBall, "--execute", args);
             script.delete();
-            if (ret != 0) {
+            if (!ok) {
                 log.fatalError("Could not add custom repositories.");
                 return false;
             }
@@ -242,26 +255,22 @@ public final class PBuilderWorker extends ChrootWorker {
 
     @Override
     public boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
-        ArgumentListBuilder a = defaultArgumentList(tarBall, "--clean");
-        return launcher.launch().cmds(a).stdout(listener).stderr(listener.getLogger()).join() == 0;
+        return doLaunch_LogStderr(launcher, listener, tarBall, "--clean", null);
     }
 
     @Override
     public boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
-        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
-                .add("--update")
-                .add("--basetgz").add(tarBall.getRemote());
-        return launcher.launch().cmds(b).stderr(listener.getLogger()).join() == 0;
+        return doLaunch_LogStderr(launcher, listener, tarBall, "--update", null);
     }
 
     @Override
     public boolean healthCheck(Launcher launcher) {
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
-        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
-                .add("--help");
+        ArgumentListBuilder cmd = makeCommand(null, "--help", null);
         try {
-            launcher.launch().cmds(b).stderr(stderr).stdout(stdout).join();
+            /* This function will need to parse stdout, so we don't use doLaunch_X here */
+            launcher.launch().cmds(cmd).stderr(stderr).stdout(stdout).join();
             if (stdout.toString().contains("--basetgz")) {
                 return true;
             }
