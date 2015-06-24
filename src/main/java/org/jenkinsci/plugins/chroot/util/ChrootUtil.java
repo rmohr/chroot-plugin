@@ -66,7 +66,7 @@ public class ChrootUtil {
         if (!md5.exists()) {
             return null;
         }
-        return md5.readToString();
+        return md5.readToString().trim();
     }
 
     public static FilePath getDigestFile(FilePath file) {
