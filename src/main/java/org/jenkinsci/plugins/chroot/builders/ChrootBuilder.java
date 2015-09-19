@@ -142,8 +142,8 @@ public class ChrootBuilder extends Builder implements Serializable {
         installation = installation.forEnvironment(env);
         if (installation.getHome() == null) {
             listener.fatalError("Installation of chroot environment failed");
-            listener.fatalError("Please check if pbuilder is installed on the selected node and that"
-                    + " the user, Jenkins uses, cann run pbuilder with sudo.");
+            listener.fatalError("Please check if pbuilder is installed on the selected node, and that"
+                    + " the user Jenkins uses can run pbuilder with sudo.");
             return false;
         }
         FilePath tarBall = new FilePath(build.getBuiltOn().getChannel(), installation.getHome());
