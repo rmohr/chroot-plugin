@@ -30,13 +30,13 @@ import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.AutoCompletionCandidates;
 import hudson.model.BuildListener;
 import hudson.model.FreeStyleProject;
 import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -199,12 +199,13 @@ public class ChrootBuilder extends Builder implements Serializable {
     @Extension
     public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
-        public ListBoxModel doFillChrootNameItems() {
-            ListBoxModel items = new ListBoxModel();
+        public AutoCompletionCandidates doAutoCompleteChrootName(@QueryParameter String value) {
+            AutoCompletionCandidates c = new AutoCompletionCandidates();
             for (ChrootToolset set : ChrootToolset.list()) {
-                items.add(set.getName(), set.getName());
+                if(set.getName().startsWith(value))
+                    c.add(set.getName());
             }
-            return items;
+            return c;
         }
 
         @Override
