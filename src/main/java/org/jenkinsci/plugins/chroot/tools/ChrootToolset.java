@@ -92,7 +92,7 @@ public final class ChrootToolset extends ToolInstallation implements Environment
         if (Strings.isNullOrEmpty(home)) {
             throw new IOException("The node " + node.getDisplayName() + " is not correctly setup up for " + this.getToolName());
         }
-        return new ChrootToolset(getName(), translateFor(node, listener), getToolName(), getProperties().toList());
+        return new ChrootToolset(getName(), home, getToolName(), getProperties().toList());
     }
 
     public static ChrootToolset getInstallationByName(String name) {

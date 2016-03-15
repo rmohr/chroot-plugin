@@ -206,6 +206,7 @@ public final class PBuilderWorker extends ChrootWorker {
     public List<String> getDefaultPackages() {
         return new ImmutableList.Builder<String>()
                 .add("software-properties-common")
+                .add("python3-software-properties") // fix for ubunt 12.04 to select the fallback packages
                 .add("sudo")
                 .add("wget").build();
     }
