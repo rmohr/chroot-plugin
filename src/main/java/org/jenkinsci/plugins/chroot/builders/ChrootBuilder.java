@@ -156,7 +156,7 @@ public class ChrootBuilder extends Builder implements Serializable {
         workerTarBall.getParent().mkdirs();
 
         // force environment recreation when clear is selected
-        if (isClear()) {
+        if (workerTarBall.exists() && isClear()) {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Chroot environment cleanup failed");
