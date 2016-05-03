@@ -151,6 +151,11 @@ public class ChrootBuilder extends Builder implements Serializable {
         FilePath workerTarBall = build.getWorkspace().child(this.chrootName).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
 
+        if (!workerTarBall.exists() || !ChrootUtil.isFileIntact(workerTarBall) || tarBall.lastModified() > workerTarBall.lastModified()) {
+            tarBall.act(new LocalCopyTo(workerTarBall.getRemote()));
+            ChrootUtil.getDigestFile(tarBall).act(new LocalCopyTo(ChrootUtil.getDigestFile(workerTarBall).getRemote()));
+        }
+
         // force environment recreation when clear is selected
         if (isClear()) {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
@@ -158,11 +163,6 @@ public class ChrootBuilder extends Builder implements Serializable {
                 listener.fatalError("Chroot environment cleanup failed");
                 return ret || ignoreExit;
             }
-        }
-
-        if (!workerTarBall.exists() || !ChrootUtil.isFileIntact(workerTarBall) || tarBall.lastModified() > workerTarBall.lastModified()) {
-            tarBall.act(new LocalCopyTo(workerTarBall.getRemote()));
-            ChrootUtil.getDigestFile(tarBall).act(new LocalCopyTo(ChrootUtil.getDigestFile(workerTarBall).getRemote()));
         }
 
         //install extra packages
