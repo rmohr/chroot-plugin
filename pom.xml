@@ -23,6 +23,7 @@
     <connection>scm:git:ssh://github.com/jenkinsci/chroot-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/chroot-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/chroot-plugin</url>
+    <tag>HEAD</tag>
   </scm>
 
   <developers>
@@ -53,6 +54,14 @@
               <groupId>org.jenkins-ci.tools</groupId>
               <artifactId>maven-hpi-plugin</artifactId>
               <version>1.95</version>
+          </plugin>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-release-plugin</artifactId>
+              <version>2.5</version>
+              <configuration>
+                  <autoVersionSubmodules>true</autoVersionSubmodules>
+              </configuration>
           </plugin>
       </plugins>
   </build>

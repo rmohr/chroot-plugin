@@ -30,13 +30,13 @@ import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.AutoCompletionCandidates;
 import hudson.model.BuildListener;
 import hudson.model.FreeStyleProject;
 import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -137,7 +137,7 @@ public class ChrootBuilder extends Builder implements Serializable {
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
-        ChrootToolset installation = ChrootToolset.getInstallationByName(this.chrootName);
+        ChrootToolset installation = ChrootToolset.getInstallationByName(env.expand(this.chrootName));
         installation = installation.forNode(build.getBuiltOn(), listener);
         installation = installation.forEnvironment(env);
         if (installation.getHome() == null) {
@@ -148,11 +148,11 @@ public class ChrootBuilder extends Builder implements Serializable {
         }
         FilePath tarBall = new FilePath(build.getBuiltOn().getChannel(), installation.getHome());
 
-        FilePath workerTarBall = build.getWorkspace().child(this.chrootName).child(tarBall.getName());
+        FilePath workerTarBall = build.getWorkspace().child(env.expand(this.chrootName)).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
 
         // force environment recreation when clear is selected
-        if (isClear()) {
+        if (workerTarBall.exists() && isClear()) {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Chroot environment cleanup failed");
@@ -198,17 +198,18 @@ public class ChrootBuilder extends Builder implements Serializable {
     @Extension
     public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
-        public ListBoxModel doFillChrootNameItems() {
-            ListBoxModel items = new ListBoxModel();
+        public AutoCompletionCandidates doAutoCompleteChrootName(@QueryParameter String value) {
+            AutoCompletionCandidates c = new AutoCompletionCandidates();
             for (ChrootToolset set : ChrootToolset.list()) {
-                items.add(set.getName(), set.getName());
+                if(set.getName().startsWith(value))
+                    c.add(set.getName());
             }
-            return items;
+            return c;
         }
 
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
-            return FreeStyleProject.class.isAssignableFrom(jobType);
+            return true;
         }
 
         @Override
